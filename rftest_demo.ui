@@ -2,6 +2,9 @@
 <ui version="4.0">
  <class>rftestui</class>
  <widget class="QWidget" name="rftestui">
+  <property name="windowModality">
+   <enum>Qt::WindowModal</enum>
+  </property>
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -10,11 +13,31 @@
     <height>479</height>
    </rect>
   </property>
+  <property name="font">
+   <font>
+    <pointsize>9</pointsize>
+   </font>
+  </property>
+  <property name="focusPolicy">
+   <enum>Qt::StrongFocus</enum>
+  </property>
+  <property name="contextMenuPolicy">
+   <enum>Qt::NoContextMenu</enum>
+  </property>
+  <property name="acceptDrops">
+   <bool>true</bool>
+  </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
   <property name="autoFillBackground">
-   <bool>true</bool>
+   <bool>false</bool>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">#rftestui{
+background: rgb(255, 255, 255);
+}
+</string>
   </property>
   <widget class="QPushButton" name="buttonDutDisconnect">
    <property name="geometry">
@@ -68,23 +91,8 @@
      <bold>true</bold>
     </font>
    </property>
-   <property name="autoFillBackground">
-    <bool>true</bool>
-   </property>
    <property name="text">
     <string/>
-   </property>
-   <property name="scaledContents">
-    <bool>false</bool>
-   </property>
-   <property name="wordWrap">
-    <bool>true</bool>
-   </property>
-   <property name="margin">
-    <number>1</number>
-   </property>
-   <property name="indent">
-    <number>0</number>
    </property>
   </widget>
   <widget class="Line" name="line_2">
@@ -238,23 +246,8 @@
      <bold>true</bold>
     </font>
    </property>
-   <property name="autoFillBackground">
-    <bool>true</bool>
-   </property>
    <property name="text">
     <string/>
-   </property>
-   <property name="scaledContents">
-    <bool>false</bool>
-   </property>
-   <property name="wordWrap">
-    <bool>true</bool>
-   </property>
-   <property name="margin">
-    <number>1</number>
-   </property>
-   <property name="indent">
-    <number>0</number>
    </property>
   </widget>
   <widget class="QComboBox" name="goldenSampleIfList">
@@ -677,23 +670,8 @@
       <bold>true</bold>
      </font>
     </property>
-    <property name="autoFillBackground">
-     <bool>true</bool>
-    </property>
     <property name="text">
      <string/>
-    </property>
-    <property name="scaledContents">
-     <bool>false</bool>
-    </property>
-    <property name="wordWrap">
-     <bool>true</bool>
-    </property>
-    <property name="margin">
-     <number>1</number>
-    </property>
-    <property name="indent">
-     <number>0</number>
     </property>
    </widget>
    <widget class="QLabel" name="mocaResult">
@@ -712,23 +690,8 @@
       <bold>true</bold>
      </font>
     </property>
-    <property name="autoFillBackground">
-     <bool>true</bool>
-    </property>
     <property name="text">
      <string/>
-    </property>
-    <property name="scaledContents">
-     <bool>false</bool>
-    </property>
-    <property name="wordWrap">
-     <bool>true</bool>
-    </property>
-    <property name="margin">
-     <number>1</number>
-    </property>
-    <property name="indent">
-     <number>0</number>
     </property>
    </widget>
    <widget class="QLabel" name="zigbeeResult">
@@ -747,23 +710,8 @@
       <bold>true</bold>
      </font>
     </property>
-    <property name="autoFillBackground">
-     <bool>true</bool>
-    </property>
     <property name="text">
      <string/>
-    </property>
-    <property name="scaledContents">
-     <bool>false</bool>
-    </property>
-    <property name="wordWrap">
-     <bool>true</bool>
-    </property>
-    <property name="margin">
-     <number>1</number>
-    </property>
-    <property name="indent">
-     <number>0</number>
     </property>
    </widget>
   </widget>
@@ -852,23 +800,8 @@
      <bold>true</bold>
     </font>
    </property>
-   <property name="autoFillBackground">
-    <bool>true</bool>
-   </property>
    <property name="text">
     <string/>
-   </property>
-   <property name="scaledContents">
-    <bool>false</bool>
-   </property>
-   <property name="wordWrap">
-    <bool>true</bool>
-   </property>
-   <property name="margin">
-    <number>1</number>
-   </property>
-   <property name="indent">
-    <number>0</number>
    </property>
   </widget>
   <widget class="QLabel" name="goldenSampleIfLabel">
@@ -977,23 +910,8 @@
      <bold>true</bold>
     </font>
    </property>
-   <property name="autoFillBackground">
-    <bool>true</bool>
-   </property>
    <property name="text">
     <string/>
-   </property>
-   <property name="scaledContents">
-    <bool>false</bool>
-   </property>
-   <property name="wordWrap">
-    <bool>true</bool>
-   </property>
-   <property name="margin">
-    <number>1</number>
-   </property>
-   <property name="indent">
-    <number>0</number>
    </property>
   </widget>
   <widget class="QTextEdit" name="hdmiValue">
@@ -1027,23 +945,8 @@
      <bold>true</bold>
     </font>
    </property>
-   <property name="autoFillBackground">
-    <bool>true</bool>
-   </property>
    <property name="text">
     <string/>
-   </property>
-   <property name="scaledContents">
-    <bool>false</bool>
-   </property>
-   <property name="wordWrap">
-    <bool>true</bool>
-   </property>
-   <property name="margin">
-    <number>1</number>
-   </property>
-   <property name="indent">
-    <number>0</number>
    </property>
   </widget>
   <widget class="QLabel" name="sataLabel">
@@ -1122,30 +1025,29 @@
      <height>22</height>
     </rect>
    </property>
-   <property name="font">
-    <font>
-     <pointsize>9</pointsize>
-     <weight>75</weight>
-     <bold>true</bold>
-    </font>
-   </property>
-   <property name="autoFillBackground">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string/>
-   </property>
-   <property name="scaledContents">
+   <property name="mouseTracking">
     <bool>false</bool>
    </property>
-   <property name="wordWrap">
-    <bool>true</bool>
+   <property name="autoFillBackground">
+    <bool>false</bool>
    </property>
-   <property name="margin">
-    <number>1</number>
+   <property name="styleSheet">
+    <string notr="true">QLabel { background-color : green; color : white; }</string>
    </property>
-   <property name="indent">
-    <number>0</number>
+   <property name="inputMethodHints">
+    <set>Qt::ImhPreferUppercase</set>
+   </property>
+   <property name="frameShape">
+    <enum>QFrame::NoFrame</enum>
+   </property>
+   <property name="frameShadow">
+    <enum>QFrame::Sunken</enum>
+   </property>
+   <property name="text">
+    <string>PASS</string>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignCenter</set>
    </property>
   </widget>
  </widget>

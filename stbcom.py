@@ -126,40 +126,12 @@ class SkedTelnet():
                     sys.stdout.write(data)
                     #user entered a message
                     if data:
-                        app.ptc_update_msg("updateTelnetEditor",data,"")
                         return data
+                    else:
+                        return ''
         except:
             print "There is not connection "
-    '''#Not working on windows so disabled
-    def telReadSocket(self,app):
-        try:
-            s= self.tn.get_socket()
-			print s
-            while 1:
-                QtCore.QCoreApplication.processEvents()
-                time.sleep(.5)
-                socket_list = [sys.stdin, s]
-                #print "telReadBlock"
-                # Get the list sockets which are readable
-                read_sockets, write_sockets, error_sockets = select.select(socket_list , [], [])
-                print read_sockets
-                for sock in read_sockets:
-                    #incoming message from remote server
-                    if sock == s:
-                        data = sock.recv(4096)
-                        if not data :
-                            print 'No data from Telnet Server'
-                        else :
-                            print data
-                            print "SS"
-                            sys.stdout.write(data)
-                            #user entered a message
-                            if data:
-                                app.ptc_update_msg("updateTelnetEditor",data,"")
-                                return data
-        except:
-            print "Socket Communication is Not Working "
-     '''
+
     def telread(self,string):
         return self.tn.read_until(string)
     def telexit(self):
