@@ -66,6 +66,7 @@ class SkedYesUI(QtGui.QMainWindow):
         self.ui.buttonDutConnect.clicked.connect(self.connectToDut)
         self.ui.buttonDutDisconnect.clicked.connect(self.disconnectFromDut)
         self.msgQ = Queue()
+        buildCommandList()
 
     def initResetDefaultValues(self):
         self.ui.goldenSampleIfList.addItem("COM1")
@@ -90,13 +91,13 @@ class SkedYesUI(QtGui.QMainWindow):
         self.serialObj = SkedSerial()
         print "Connected "
         self.updateGsConnectionStatus("Connected")
+        stbPrepareGsRfTest(self,self.serialObj)
 
     def connectToDut(self):
         print "Connecting to telnet ... "
         self.telnetObj = SkedTelnet()
         print "Connected "
         self.updateDutConnectionStatus("Connected")
-        buildCommandList()
         option = ""
         value = ""
         msg = ""
@@ -117,6 +118,11 @@ class SkedYesUI(QtGui.QMainWindow):
         telReadSocke
 
     def ptcPerformRfTest(self):
+
+        stbSnInfo = stbGetSerialNumber(self, self.telnetObj)
+        if stbSnInfo !='':
+            self.updateSerialNumberInfo(stbSnInfo[0],stbSnInfo[1])
+
         #Get the Software Version
         stbSoftwareVer = stbGetSoftwareVersion(self, self.telnetObj)
         if stbSoftwareVer !='':
@@ -152,13 +158,29 @@ class SkedYesUI(QtGui.QMainWindow):
             self.ptcHandlingThread.ptc_update_msg("updateHddTestResult","FAIL","","")
 
         #Hdmi_output test
-        stbHdmiOutInfo = stbPerformHdmiTest(self. self.telnetObj)
+        stbHdmiOutInfo = stbPerformHdmiTest(self, self.telnetObj)
         if stbHddInfo !='':
             self.ptcHandlingThread.ptc_update_msg("updateHdmiOuputTestResult","PASS",stbHdmiOutInfo,"")
         else:
             self.ptcHandlingThread.ptc_update_msg("updateHdmiOuputTestResult","FAIL","","")
 
+        stbProgramMacAdd = stbProgramMacAddress(self, self.telnetObj)
+        if stbProgramMacAdd !='':
+            self.ptcHandlingThread.ptc_update_msg("updateMacAddressResult","PASS",stbProgramMacAdd,"")
+        else:
+            self.ptcHandlingThread.ptc_update_msg("updateMacAddressResult","FAIL","","")
 
+        stbMocaTestInfo = stbPerformMocaTest(self,self.telnetObj,self.serialObj)
+        if stbMocaTestInfo !='':
+            self.ptcHandlingThread.ptc_update_msg("updateMocaResult","PASS",stbMocaTestInfo,"")
+        else:
+            self.ptcHandlingThread.ptc_update_msg("updateMocaResult","FAIL","","")
+
+        stbZigBeeTestInfo = stbPerformZigBeeTest(self,self.telnetObj,self.serialObj)
+        if stbZigBeeTestInfo !='':
+            self.ptcHandlingThread.ptc_update_msg("updateZigBeeResult","PASS",stbZigBeeTestInfo,"")
+        else:
+            self.ptcHandlingThread.ptc_update_msg("updateZigBeeResult","FAIL","","")
 
     def uiUpdateProcess( self, option,result,value, msg ):
         if(option == "updateClock"):
@@ -173,50 +195,15 @@ class SkedYesUI(QtGui.QMainWindow):
             self.updateFanTestResult(result,value)
         elif(option == "updateHddTestResult"):
             self.updateHddTestResult(result,value)
-        '''
-        elif(option == "updateEthMacAddr"):
-            self.updateEthMac(value)
-        elif(option == "updateWifiMacAddr"):
-            self.updateWifiMac(value)
-        elif(option == "updateModelName"):
-            self.updateModelName(value)
-        elif(option == "updateHddSerial"):
-            self.updateHddSerailNumber(value)
-        elif(option == "updateHddTestProgress"):
-            self.updateHddTestProgress(value,int(msg))
+        elif(option == "updateHdmiOuputTestResult"):
+            self.updateHdmiOuputTestResult(result,value)
+        elif(option == "updateMacAddressResult"):
+            self.updateMacAddressResult(result,value)
+        elif(option == "updateMocaResult"):
+            self.updateMocaResult(result,value)
+        elif(option == "updateZigBeeResult"):
+            self.updateZigBeeResult(result,value)
 
-        elif (option == "updateUsbTestProgress"):
-            self.updateUsbTestProgress(value, int (msg))
-        elif (option == "updateSmartcardTestResult"):
-            self.updateSmartcardTestResult(value)
-        elif (option == "updateSmartcardTestProgress"):
-            self.updateSmartcardTestProgress(value, int (msg))
-
-        elif (option == "updateFanTestProgress"):
-            self.updateFanTestProgress(value, int (msg))
-        elif (option == "updateLedTestResult"):
-            self.updateLedTestResult(value)
-        elif (option == "updateLedTestProgress"):
-            self.updateLedTestProgress(value, int (msg))
-        elif (option == "updateFpTestResult"):
-            self.updateFpTestResult(value)
-        elif (option == "updateFpTestProgress"):
-            self.updateFpTestProgress(value, int (msg))
-        elif (option == "updateButtonTestProgress"):
-            self.updateButtonTestProgress(value, int (msg))
-        elif (option == "updateButtonTestResult"):
-            self.updateButtonTestResult(value)
-        elif (option == "updateIrTestProgress"):
-            self.updateIrTestProgress(value, int (msg))
-        elif (option == "updateIrTestResult"):
-            self.updateIrTestResult(value)
-        elif (option == "updateFanTestSpeed"):
-            self.updateFanTestSpeed(value)
-        elif (option == "updateTunerTestResult"):
-            self.updateTunerTestResult(value)
-        elif (option == "updateTunerTestProgress"):
-            self.updateTunerTestProgress(value, int (msg))
-        '''
     def updateGsConnectionStatus(self,text):
         if text == "Connected":
             self.ui.goldenSampleConnectionLabel.setText("GS Connected")
@@ -286,161 +273,250 @@ class SkedYesUI(QtGui.QMainWindow):
             self.ui.sataResult.setStyleSheet(_fromUtf8("QLabel { background-color : red; color : white; }"))
             self.ui.sataResult.setText("FAIL")
 
+    def updateHdmiOuputTestResult(self,result,text):
+        self.ui.hdmiValue.setOverwriteMode(True)
+        self.ui.hdmiValue.setPlainText(text)
+        self.ui.hdmiValue.setReadOnly(True)
+        if result == "PASS":
+            self.ui.hdmiResult.setStyleSheet(_fromUtf8("QLabel { background-color : green; color : white; }"))
+            self.ui.hdmiResult.setText("PASS")
+        else:
+            self.ui.hdmiResult.setStyleSheet(_fromUtf8("QLabel { background-color : red; color : white; }"))
+            self.ui.hdmiResult.setText("FAIL")
 
-    def updateEthMac(self,text) :
-        self.ui.textStbEth0Mac.setText(text)
-        self.ui.textStbEth0Mac.setReadOnly(True)
 
-    def updateWifiMac(self,text) :
-        self.ui.textStbWifiMac.setText(text)
-        self.ui.textStbWifiMac.setReadOnly(True)
+    def updateMacAddressResult(self,result,text):
+        self.ui.dutMacAddress.setOverwriteMode(True)
+        self.ui.dutMacAddress.setPlainText(text)
+        self.ui.dutMacAddress.setReadOnly(True)
+        if result == "PASS":
+            self.ui.macResult.setStyleSheet(_fromUtf8("QLabel { background-color : green; color : white; }"))
+            self.ui.macResult.setText("PASS")
+        else:
+            self.ui.macResult.setStyleSheet(_fromUtf8("QLabel { background-color : red; color : white; }"))
+            self.ui.macResult.setText("FAIL")
 
-    def updateClock(self,text):
-        self.ui.dateAndTime.setText(text)
-    def updateTemperature(self,text):
-        print text
-        #self.ui.labelTemperatureValue.setStyleSheet("QLabel { background-color : blue; color : white; }")
-        self.ui.labelTemperatureValue.setText(text)
-    def updateHddSerailNumber(self, text):
-        self.ui.textStbHddSn.setText(text)
+    def updateMocaResult(self,result,text):
+        self.ui.dutMocaRestult.setOverwriteMode(True)
+        self.ui.dutMocaRestult.setPlainText(text)
+        self.ui.dutMocaRestult.setReadOnly(True)
+        if result == "PASS":
+            self.ui.mocaResult.setStyleSheet(_fromUtf8("QLabel { background-color : green; color : white; }"))
+            self.ui.mocaResult.setText("PASS")
+        else:
+            self.ui.mocaResult.setStyleSheet(_fromUtf8("QLabel { background-color : red; color : white; }"))
+            self.ui.mocaResult.setText("FAIL")
 
-    def updateHddTestProgress(self,text, value):
-        self.ui.hddTestProgressBar.setProperty("value",value)
-        self.ui.statusMsgLabel.setText("HDD Test :")
-        cntstr = " Test Count %d " % hddtestCnt
-        textStr = text + cntstr
-        self.ui.statusMsgLabel.setText(textStr)
+    def updateZigBeeResult(self,result,text):
+        self.ui.dutZigbeeResult.setOverwriteMode(True)
+        self.ui.dutZigbeeResult.setPlainText(text)
+        self.ui.dutZigbeeResult.setReadOnly(True)
+        if result == "PASS":
+            self.ui.zigbeeResult.setStyleSheet(_fromUtf8("QLabel { background-color : green; color : white; }"))
+            self.ui.zigbeeResult.setText("PASS")
+        else:
+            self.ui.zigbeeResult.setStyleSheet(_fromUtf8("QLabel { background-color : red; color : white; }"))
+            self.ui.zigbeeResult.setText("FAIL")
+
+    def updateSerialNumberInfo(self,caId,chipNumber):
+        self.ui.caStbIdValueLabel.setStyleSheet(_fromUtf8("QLabel { background-color : white; color : green; }"))
+        self.ui.caChipNumValueLabel.setStyleSheet(_fromUtf8("QLabel { background-color : white; color : green; }"))
+        self.ui.caStbIdValueLabel.setText(caId)
+        self.ui.caChipNumValueLabel.setText(chipNumber)
+
+    def updateTestResult(self, value):
+        self.ui.rfTestResultValueLabel.setText(value)
 
     def updateUsbTestProgress(self,text, value):
         self.ui.usbTestProgressBar.setProperty("value",value)
         self.ui.statusMsgLabel.setText("USB Test :")
         self.ui.statusMsgLabel.setText(text)
 
-
-    def updateSmartcardTestProgress(self,text, value):
-        self.ui.smartcardTestProgressbar.setProperty("value",value)
-        self.ui.statusMsgLabel.setText("Smartcard Test :")
-        self.ui.statusMsgLabel.setText(text)
-
-    def updateSmartcardTestResult(self, text):
-        if(text == "PASS"):
-            self.ui.smartcardResult.setStyleSheet("QLabel { background-color : green; color : white; }");
-            self.ui.smartcardResult.setText("PASS")
-        elif(text == "FAIL"):
-            self.ui.smartcardResult.setStyleSheet("QLabel { background-color : red; color : white; }");
-            self.ui.smartcardResult.setText("FAIL")
-
-        self.ui.smartcardStartButton.setEnabled(True)
-        self.ui.smartcardStopButton.setEnabled(False)
-
-
-    def updateIrTestProgress(self,text, value):
-        self.ui.irTestProgressbar.setProperty("value",value)
-        self.ui.statusMsgLabel.setText("IR Test :")
-        self.ui.statusMsgLabel.setText(text)
-
-    def updateIrTestResult(self, text):
-        if(text == "PASS"):
-            self.ui.irResult.setStyleSheet("QLabel { background-color : green; color : white; }");
-            self.ui.irResult.setText("PASS")
-        elif(text == "FAIL"):
-            self.ui.irResult.setStyleSheet("QLabel { background-color : red; color : white; }");
-            self.ui.irResult.setText("FAIL")
-        self.ui.irStartButton.setEnabled(True)
-        self.ui.irStopButton.setEnabled(False)
-
-    def updateFanTestProgress(self,text, value):
-        self.ui.fanTestProgressbar.setProperty("value",value)
-        self.ui.statusMsgLabel.setText("Fan Test :")
-        self.ui.statusMsgLabel.setText(text)
-
-
     def updateFanTestSpeed(self,text):
             self.ui.fanSpeed.setText(text)
-
-    def updateLedTestResult(self, text):
-        if(text == "PASS"):
-            self.ui.ledResult.setStyleSheet("QLabel { background-color : green; color : white; }");
-            self.ui.ledResult.setText("PASS")
-        elif(text == "FAIL"):
-            self.ui.ledResult.setStyleSheet("QLabel { background-color : red; color : white; }");
-            self.ui.ledResult.setText("FAIL")
-        self.ui.ledStartButton.setEnabled(True)
-        self.ui.ledStopButton.setEnabled(False)
-
-    def updateLedTestProgress(self,text, value):
-        self.ui.ledTestProgressbar.setProperty("value",value)
-        self.ui.statusMsgLabel.setText("LED Test :")
-        self.ui.statusMsgLabel.setText(text)
-
-    def updateTunerTestResult(self, text):
-        if(text == "PASS"):
-            self.ui.tunerResult.setStyleSheet("QLabel { background-color : green; color : white; }");
-            self.ui.tunerResult.setText("PASS")
-        elif(text == "FAIL"):
-            self.ui.tunerResult.setStyleSheet("QLabel { background-color : red; color : white; }");
-            self.ui.tunerResult.setText("FAIL")
-
-
-    def updateTunerTestProgress(self,text, value):
-        self.ui.tunerTestProgressBar.setProperty("value",value)
-        self.ui.statusMsgLabel.setText("Tuner Test :")
-        self.ui.statusMsgLabel.setText(text)
-
-    def updateFpTestResult(self, text):
-        if(text == "PASS"):
-            self.ui.fpResult.setStyleSheet("QLabel { background-color : green; color : white; }");
-            self.ui.fpResult.setText("PASS")
-        elif(text == "FAIL"):
-            self.ui.fpResult.setStyleSheet("QLabel { background-color : red; color : white; }");
-            self.ui.fpResult.setText("FAIL")
-        self.ui.fpStartButton.setEnabled(True)
-        self.ui.fpStopButton.setEnabled(False)
-
-    def updateFpTestProgress(self,text, value):
-        self.ui.fpTestProgressbar.setProperty("value",value)
-        self.ui.statusMsgLabel.setText("FP Test :")
-        self.ui.statusMsgLabel.setText(text)
-
-
-    def updateButtonTestResult(self, text):
-        if(text == "PASS"):
-            self.ui.buttonResult.setStyleSheet("QLabel { background-color : green; color : white; }");
-            self.ui.buttonResult.setText("PASS")
-            Keystr = "Key : "
-            Keystr = Keystr + "Pressed"
-            self.ui.buttonKeysRecivce.setText(Keystr)
-        elif(text == "FAIL"):
-            self.ui.buttonResult.setStyleSheet("QLabel { background-color : red; color : white; }");
-            self.ui.buttonResult.setText("FAIL")
-        self.ui.buttonStartButton.setEnabled(True)
-        self.ui.buttonStopButton.setEnabled(False)
-
-    def updateButtonTestProgress(self,text, value):
-        self.ui.buttonTestProgressbar.setProperty("value",value)
-        self.ui.statusMsgLabel.setText("Button Test :")
-        self.ui.statusMsgLabel.setText(text)
-
 
     def updateModelName(self, text):
         self.ui.textStbModel.setText(text)
 
-def stbGetTemperature(appThread,tel):
-    tempFindString = "temp_monitor"
-    tel.telWrite(command_list[TestCommnad.GET_TEMPERATURE])
-    time.sleep(2)
-    data = tel.telReadSocket(appThread)
-    match = re.search(tempFindString,data)
-    #print list(data)
-    if match:
-        temperature = data[(data.find("temp_monitor")):(data.find("temp_monitor"))+15]
-        temperature = temperature.translate(None,"temp_monitor")
-        temperature = temperature + " " + "C"
-        #print temperature
-        return temperature
-    else:
-        return "0 C"
+def stbPerformMocaTest(app,tel,ser):
+    findstr= "RX THROUGHPUT PASS"
+    tel.telWrite('\x03') #ctrl + c
+    time.sleep(.2)
+    tel.telWrite(command_list[TestCommnad.MOCA_TEST_CMD1])
+    time.sleep(.2)
+    data = tel.telReadSocket(app)
+    tel.telWrite(command_list[TestCommnad.MOCA_TEST_CMD2])
+    time.sleep(1)
+    data = tel.telReadSocket(app)
+    tel.telWrite(command_list[TestCommnad.MOCA_TEST_CMD3])
+    data = tel.telReadSocket(app)
+    print data
+    print "going to wait for 15 secs to complete the THROUGHPUT test "
+    time.sleep(15)
+    data = tel.telReadSocket(app)
+    match = re.search(findstr,data)
+    print [data]
+    if match :
+        print "MOCA PASS "
+    else :
+        print "MOCA FAIL"
 
+    return data
+
+def stbPerformZigBeeTest(app,tel,ser):
+    findstr= "Avg RSSI"
+    findstrInit = "PAN"
+    findstrChSet = "Channel set to "
+    tel.telWrite('\x03') #ctrl + c
+    time.sleep(.2)
+    tel.telWrite(command_list[TestCommnad.RF_TEST_INIT_COMMAND])
+    time.sleep(2)
+    data = tel.telReadSocket(app)
+    match = re.search(findstrInit,data)
+    print [data]
+    if match:
+        #Init done
+        cmd = command_list[TestCommnad.RF_CH_SEL_CMD] + "20" #channel number
+        tel.telWrite(cmd)
+        time.sleep(1)
+        data = tel.telReadSocket(app)
+        #Channel Set OK
+        tel.telWrite(command_list[TestCommnad.RF_ANT_SEL_CMD])
+        time.sleep(1)
+        data = tel.telReadSocket(app)
+        tel.telWrite(command_list[TestCommnad.DUT_ZIGBEE_PING_TEST_CMD1])
+        time.sleep(1)
+        data = tel.telReadSocket(app)
+        tel.telWrite(command_list[TestCommnad.DUT_ZIGBEE_PING_TEST_CMD2])
+        time.sleep(1)
+        data = tel.telReadSocket(app)
+        print data
+
+    print "DUT Setup Done "
+    print "Golden Sample Setup start "
+    #send the Command to Golden Sample
+    ser.telWrite('\x03') #ctrl + c
+    time.sleep(.2)
+    ser.telWrite(command_list[TestCommnad.RF_TEST_INIT_COMMAND])
+    time.sleep(2)
+    data = ser.telReadSocket(app)
+    match = re.search(findstrInit,data)
+    print [data]
+    if match:
+        #Init done
+        cmd = command_list[TestCommnad.RF_CH_SEL_CMD] + "20" #channel number
+        ser.telWrite(cmd)
+        time.sleep(1)
+        data = ser.telReadSocket(app)
+        #Channel Set OK
+        ser.telWrite(command_list[TestCommnad.RF_ANT_SEL_CMD])
+        time.sleep(1)
+        data = ser.telReadSocket(app)
+        ser.telWrite(command_list[TestCommnad.GS_ZIGBEE_PING_TEST_CMD1])
+        time.sleep(1)
+        data = ser.telReadSocket(app)
+        ser.telWrite(command_list[TestCommnad.GS_ZIGBEE_PING_TEST_CMD2])
+        time.sleep(1)
+        data = ser.telReadSocket(app)
+        print data
+
+    print "going to wait for 10 secs to complete the ZIGBEE test "
+
+    time.sleep(10)
+    tel.telWrite(command_list[TestCommnad.DUT_ZIGBEE_PING_TEST_STAT_CMD])
+    time.sleep(3)
+    data = tel.telReadSocket(app)
+    print [data]
+    data = tel.telReadSocket(app)
+    match = re.search(findstr,data)
+
+    if match :
+        print "ZigBee PASS "
+    else :
+        print "ZigBee FAIL"
+
+    tel.telWrite(command_list[TestCommnad.DUT_ZIGBEE_PING_TEST_STOP_CMD])
+    time.sleep(1)
+    data1 = tel.telReadSocket(app)
+    ser.telWrite('\x03') #ctrl + c
+    time.sleep(.2)
+    tel.telWrite('\x03') #ctrl + c
+    time.sleep(.2)
+    if match:
+        return data
+    else:
+        return ''
+
+def stbPrepareGsRfTest(app,ser):
+
+    # Write MAC Address
+    statusStr = "Write MAC successfully"
+
+    ser.telWrite('\x03') #ctrl + c
+    time.sleep(1)
+    write_cmd = command_list[TestCommnad.WRITE_MAC] +" "+"001222FFFF30"
+    ser.telWrite(write_cmd)
+    time.sleep(1)
+    print time.time()
+    waitforfind = 1
+    while waitforfind:
+        data = ser.telReadSocket(app)
+        match = re.search(statusStr,data)
+        if match :
+            waitforfind = 0
+            print data
+
+    #Config the network
+    write_cmd = "ifconfig eth0 192.192.192.1"
+    ser.telWrite(write_cmd)
+    time.sleep(1)
+    data = ser.telReadSocket(app)
+    print data
+    write_cmd = "ifconfig eth1 192.192.168.1"
+    ser.telWrite(write_cmd)
+    time.sleep(1)
+    data = ser.telReadSocket(app)
+    print data
+
+    write_cmd = "/root/bin/init_moca"
+    ser.telWrite(write_cmd)
+    time.sleep(1)
+    data = ser.telReadSocket(app)
+    print data
+
+    write_cmd = "iperf -s &"
+    ser.telWrite(write_cmd)
+    time.sleep(1)
+    data = ser.telReadSocket(app)
+    print data
+
+    write_cmd = "pstree"
+    ser.telWrite(write_cmd)
+    time.sleep(1)
+    data = ser.telReadSocket(app)
+    print data
+
+
+def stbProgramMacAddress( app, tel) :
+    statusStr = "Write MAC successfully"
+
+    tel.telWrite('\x03') #ctrl + c
+    time.sleep(1)
+    write_cmd = command_list[TestCommnad.WRITE_MAC] + " "+"001222FFFFF0"
+    tel.telWrite(write_cmd)
+    time.sleep(1)
+    print time.time()
+    waitforfind = 1
+    while waitforfind:
+        data = tel.telReadSocket(app)
+        match = re.search(statusStr,data)
+        if match :
+            waitforfind = 0
+            print data
+            macadd = stbGetMacAddress(app,tel)
+            return macadd[0]
+        else:
+            continue
 
 def stbGetSoftwareVersion( app, tel) :
     tel.telWrite(command_list[TestCommnad.GET_VER])
@@ -480,6 +556,23 @@ def stbDumpUecCode(app,tel) :
             return data1
         else:
             continue
+
+def stbGetSerialNumber(app, tel):
+
+    snfindString= "generateSTBSN"
+    tel.telWrite(command_list[TestCommnad.GET_STBSN])
+    time.sleep(1)
+    data = tel.telReadSocket(app)
+    print [data]
+    stbid = (data[36:52])
+    print [stbid]
+    chipNum = (data[53:61])
+    print [chipNum]
+    snInfo= [stbid, chipNum ]
+
+    return snInfo
+
+
 
 def stbGetMacAddress( app, tel) :
     macaddrFindString = ":"
@@ -703,7 +796,11 @@ def stbStopUsbTest(app,tel):
     print("USB Test Stopped")
     tel.telWrite('\x03') #ctrl + c
 
-# ['\r', '\n', '#', ' ', 'h', 'd', 'd', 'S', 'e', 'r', 'i', 'a', 'l', 'N', 'u', 'm', 'b', 'e', 'r', '\r', '\n', 'Z', '9', 'C', '5', 'P', 'J', '9', '3', '\r', '\n', '#', ' ']
+def stbPerformHdmiTest(app,tel):
+    tel.telWrite('\x03') #ctrl + c
+    tel.telWrite(command_list[TestCommnad.HDMI_OUTPUT_TEST])
+    return "Check Video"
+
 def stbPerformHddTest(app,tel):
     #Send Ctrl C to stop previous running tests
     tel.telWrite('\x03') #ctrl + c

@@ -47,7 +47,22 @@ class TestCommnad:
     UEC_FW_CODE_SWAP = 32
     SET_OTP_CMD1 = 33
     SET_OTP_CMD2 = 34
-
+    HDMI_OUTPUT_TEST = 35
+    WRITE_MAC = 36
+    MOCA_TEST_CMD1 = 37
+    MOCA_TEST_CMD2 = 38
+    MOCA_TEST_CMD3 = 39
+    RF_TEST_INIT_COMMAND = 40
+    RF_CH_SEL_CMD = 41
+    RF_ANT_SEL_CMD = 42
+    DUT_ZIGBEE_PING_TEST_CMD1 = 43
+    DUT_ZIGBEE_PING_TEST_CMD2 = 44
+    GS_ZIGBEE_PING_TEST_CMD1 = 45
+    GS_ZIGBEE_PING_TEST_CMD2 = 46
+    DUT_ZIGBEE_PING_TEST_STAT_CMD = 47
+    DUT_ZIGBEE_PING_TEST_STOP_CMD = 48
+    DUT_CH_PWR_TEST_STAT_CMD1 = 49
+    DUT_CH_PWR_TEST_STOP_CMD = 50
 
 def buildCommandList():
     command_list.append("/root/htp/atcfg -g FW_GIT_VER") # GET_VER = 0
@@ -85,8 +100,22 @@ def buildCommandList():
     command_list.append("changeToUECFW") # UEC_FW_CODE_SWAP = 32
     command_list.append("cd /root/htp" ) # SET_OTP_CMD1 = 33
     command_list.append("otp_bl -w -s all") # SET_OTP_CMD2 = 34
-
-
+    command_list.append("/root/htp/graphics_as_video") # HDMI_OUTPUT_TEST =35
+    command_list.append("write_mac.sh") # WRITE_MAC = 36
+    command_list.append("ifconfig eth1 192.192.168.10") # MOCA_TEST_CMD1 = 37
+    command_list.append("init_moca") # MOCA_TEST_CMD2 = 38
+    command_list.append("moca_throughput 192.192.168.1 5 350 350") # MOCA_TEST_CMD3 = 39
+    command_list.append("GP510_transceiver 2") # RF_TEST_INIT_COMMAND = 40
+    command_list.append("ch ") # RF_CH_SEL_CMD = 41
+    command_list.append("an 0") # RF_ANT_SEL_CMD = 42
+    command_list.append("R") # DUT_ZIGBEE_PING_TEST_CMD1 = 43
+    command_list.append("rx 1") # DUT_ZIGBEE_PING_TEST_CMD2 = 44
+    command_list.append("w 3") # GS_ZIGBEE_PING_TEST_CMD1 = 45
+    command_list.append("tx 1000 10") # GS_ZIGBEE_PING_TEST_CMD2 = 46
+    command_list.append("P") # DUT_ZIGBEE_PING_TEST_STAT_CMD = 47
+    command_list.append("rx 0") # DUT_ZIGBEE_PING_TEST_STOP_CMD = 48
+    command_list.append("cw u") # DUT_CH_PWR_TEST_STAT_CMD1 = 49
+    command_list.append("cw o") # DUT_CH_PWR_TEST_STOP_CMD = 50
 
 
 #user = raw_input("Enter user name:")
@@ -170,14 +199,9 @@ class SkedSerial():
             data = ''
             while self.serial.inWaiting() > 0:
                 data += self.serial.read(1)
-                print data
-                QtCore.QCoreApplication.processEvents()
 
             if data != '':
-                print list(data)
-                sys.stdout.write(data)
-                #user entered a message
-                app.ptc_update_msg("updateTelnetEditor",data,"")
+                #print list(data)
                 return data
             else:
                 return ''
