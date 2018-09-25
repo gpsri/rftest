@@ -10,6 +10,7 @@ import xml.etree.ElementTree as ET
 #from sklearn import tree
 import re
 import signal
+
 from Queue import Queue
 
 exitFlag = 0
@@ -88,7 +89,24 @@ class SkedYesUI(QtGui.QMainWindow):
 
     def connectToGsStb(self):
         print "Connecting to COM Port  ... "
-        self.serialObj = SkedSerial()
+        comport = str(self.ui.goldenSampleIfList.currentText())
+        print sys.platform
+        if sys.platform == "linux2" or sys.platform == "linux":
+            if comport == 'COM1':
+                comport = '/dev/ttyUSB0'
+            elif comport == 'COM2':
+                comport = '/dev/ttyUSB1'
+            elif comport == 'COM3':
+                comport = '/dev/ttyUSB2'
+            elif comport == 'COM4':
+                comport = '/dev/ttyUSB3'
+            elif comport == 'COM5':
+                comport = '/dev/ttyUSB4'
+            else:
+                comport = "COM1"
+
+        self.serialObj = SkedSerial(comport)
+
         print "Connected "
         self.updateGsConnectionStatus("Connected")
         stbPrepareGsRfTest(self,self.serialObj)
@@ -358,10 +376,12 @@ def stbPerformMocaTest(app,tel,ser):
     print [data]
     if match :
         print "MOCA PASS "
+        return data
     else :
         print "MOCA FAIL"
+        return ''
 
-    return data
+
 
 def stbPerformZigBeeTest(app,tel,ser):
     findstr= "Avg RSSI"
@@ -427,9 +447,8 @@ def stbPerformZigBeeTest(app,tel,ser):
     time.sleep(3)
     data = tel.telReadSocket(app)
     print [data]
-    data = tel.telReadSocket(app)
-    match = re.search(findstr,data)
 
+    match = re.search(findstr,data)
     if match :
         print "ZigBee PASS "
     else :

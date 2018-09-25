@@ -171,9 +171,9 @@ class SkedTelnet():
 #user = raw_input("Enter user name:")
 #password = getpass.getpass()
 class SkedSerial():
-    def __init__(self):
+    def __init__(self,comport):
         ser = serial.Serial(
-            port='/dev/ttyUSB0',
+            port=comport,
             baudrate=115200,
             parity=serial.PARITY_NONE,
             stopbits=serial.STOPBITS_ONE,
@@ -181,7 +181,6 @@ class SkedSerial():
             xonxoff = False,
             rtscts = True
         )
-
         ser.isOpen()
         self.serial = ser
         #print tn.read_until("gps")
