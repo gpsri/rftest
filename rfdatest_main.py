@@ -46,6 +46,8 @@ class getPTCThread(QThread):
         while self.runThread:
             msg = self.msgQ.get()
             print " %s " % msg
+            if(msg == "startRfTest"):
+                self.ptcPerformRfTest()
             self.sleep(1)
             self.msgQ.task_done()
 
@@ -53,6 +55,72 @@ class getPTCThread(QThread):
         self.runThread = 1
     def stopThread(self):
         self.runThread = 0
+
+    def ptcPerformRfTest(self):
+
+        stbSnInfo = stbGetSerialNumber(self, self.telnetObj)
+        if stbSnInfo !='':
+            #self.updateSerialNumberInfo(stbSnInfo[0],stbSnInfo[1])
+            self.ptc_update_msg("updateSerialNumberInfo","PASS",stbSnInfo[0],stbSnInfo[1])
+
+        #Get the Software Version
+        stbSoftwareVer = stbGetSoftwareVersion(self, self.telnetObj)
+        if stbSoftwareVer !='':
+            self.ptc_update_msg("updateSoftwareVersion","PASS",stbSoftwareVer,"")
+        else:
+            self.ptc_update_msg("updateSoftwareVersion","FAIL",stbSoftwareVer,"")
+        # Dump UEC Code
+        stbDumpInfo = stbDumpUecCode(self,self.telnetObj)
+        if stbDumpInfo !='':
+            self.ptc_update_msg("updateUecCodeDump","PASS",stbDumpInfo,"")
+        else:
+            self.ptc_update_msg("updateUecCodeDump","FAIL","","")
+
+        # Usb Test
+        stbUsbInfo = stbPerformUsbTest(self,self.telnetObj)
+        if stbDumpInfo !='':
+            self.ptc_update_msg("updateUsbTestResult","PASS",stbUsbInfo,"")
+        else:
+            self.ptc_update_msg("updateUsbTestResult","FAIL","","")
+
+        #Fan test
+        stbFanInfo = stbPerformFanTest(self,self.telnetObj)
+        if stbFanInfo !='':
+            self.ptc_update_msg("updateFanTestResult","PASS",stbFanInfo,"")
+        else:
+            self.ptc_update_msg("updateFanTestResult","FAIL","","")
+
+        #Sata test
+        stbHddInfo = stbPerformHddTest(self,self.telnetObj)
+        if stbHddInfo !='':
+            self.ptc_update_msg("updateHddTestResult","PASS",stbHddInfo,"")
+        else:
+            self.ptc_update_msg("updateHddTestResult","FAIL","","")
+
+        #Hdmi_output test
+        stbHdmiOutInfo = stbPerformHdmiTest(self, self.telnetObj)
+        if stbHddInfo !='':
+            self.ptc_update_msg("updateHdmiOuputTestResult","PASS",stbHdmiOutInfo,"")
+        else:
+            self.ptc_update_msg("updateHdmiOuputTestResult","FAIL","","")
+
+        stbProgramMacAdd = stbProgramMacAddress(self, self.telnetObj)
+        if stbProgramMacAdd !='':
+            self.ptc_update_msg("updateMacAddressResult","PASS",stbProgramMacAdd,"")
+        else:
+            self.ptc_update_msg("updateMacAddressResult","FAIL","","")
+
+        stbMocaTestInfo = stbPerformMocaTest(self,self.telnetObj,self.serialObj)
+        if stbMocaTestInfo !='':
+            self.ptc_update_msg("updateMocaResult","PASS",stbMocaTestInfo,"")
+        else:
+            self.ptc_update_msg("updateMocaResult","FAIL","","")
+
+        stbZigBeeTestInfo = stbPerformZigBeeTest(self,self.telnetObj,self.serialObj)
+        if stbZigBeeTestInfo !='':
+            self.ptc_update_msg("updateZigBeeResult","PASS",stbZigBeeTestInfo,"")
+        else:
+            self.ptc_update_msg("updateZigBeeResult","FAIL","","")
 
 
 class SkedYesUI(QtGui.QMainWindow):
@@ -86,6 +154,7 @@ class SkedYesUI(QtGui.QMainWindow):
         self.ui.buttonDutConnect.setEnabled(True)
         self.ui.buttonDutDisconnect.setEnabled(False)
         self.updateDutConnectionStatus(" Not Connected ")
+        self.clearTestResults()
 
     def connectToGsStb(self):
         print "Connecting to COM Port  ... "
@@ -111,6 +180,38 @@ class SkedYesUI(QtGui.QMainWindow):
         self.updateGsConnectionStatus("Connected")
         stbPrepareGsRfTest(self,self.serialObj)
 
+    def clearTestResults(self):
+        self.ui.caChipNumValueLabel.clear()
+        self.ui.caStbIdValueLabel.clear()
+        self.ui.rfTestResultValueLabel.clear()
+        self.ui.htpVersionValue.clear()
+        self.ui.htpVersionResult.clear()
+        self.ui.htpVersionResult.hide()
+        self.ui.dumpUecCodeValue.clear()
+        self.ui.dumpCodeResult.clear()
+        self.ui.dumpCodeResult.hide()
+        self.ui.usbValue.clear()
+        self.ui.usbResult.clear()
+        self.ui.usbResult.hide()
+        self.ui.fanValue.clear()
+        self.ui.fanResult.clear()
+        self.ui.fanResult.hide()
+        self.ui.sataValue.clear()
+        self.ui.sataResult.clear()
+        self.ui.sataResult.hide()
+        self.ui.hdmiValue.clear()
+        self.ui.hdmiResult.clear()
+        self.ui.hdmiResult.hide()
+        self.ui.dutMacAddress.clear()
+        self.ui.macResult.clear()
+        self.ui.macResult.hide()
+        self.ui.dutMocaRestult.clear()
+        self.ui.mocaResult.clear()
+        self.ui.mocaResult.hide()
+        self.ui.dutZigbeeResult.clear()
+        self.ui.zigbeeResult.clear()
+        self.ui.zigbeeResult.hide()
+
     def connectToDut(self):
         print "Connecting to telnet ... "
         self.telnetObj = SkedTelnet()
@@ -126,83 +227,21 @@ class SkedYesUI(QtGui.QMainWindow):
         self.ptcHandlingThread.startThread()
         self.ui.buttonDutConnect.setEnabled(False)
         self.ui.buttonDutDisconnect.setEnabled(True)
+        self.msgQ.put("startRfTest")
         # auto test enabled
-        self.ptcPerformRfTest()
+        #self.ptcPerformRfTest()
 
     def ptc_update_systemInfo(self):
         stbSoftwareVer = stbGetSoftwareVersion(self, self.telnetObj)
         if stbSoftwareVer !='':
             self.ptc_update_msg("updateSoftwareVersion",stbSoftwareVer,"")
-        telReadSocke
 
-    def ptcPerformRfTest(self):
-
-        stbSnInfo = stbGetSerialNumber(self, self.telnetObj)
-        if stbSnInfo !='':
-            self.updateSerialNumberInfo(stbSnInfo[0],stbSnInfo[1])
-
-        #Get the Software Version
-        stbSoftwareVer = stbGetSoftwareVersion(self, self.telnetObj)
-        if stbSoftwareVer !='':
-            self.ptcHandlingThread.ptc_update_msg("updateSoftwareVersion","PASS",stbSoftwareVer,"")
-        else:
-            self.ptcHandlingThread.ptc_update_msg("updateSoftwareVersion","FAIL",stbSoftwareVer,"")
-        # Dump UEC Code
-        stbDumpInfo = stbDumpUecCode(self,self.telnetObj)
-        if stbDumpInfo !='':
-            self.ptcHandlingThread.ptc_update_msg("updateUecCodeDump","PASS",stbDumpInfo,"")
-        else:
-            self.ptcHandlingThread.ptc_update_msg("updateUecCodeDump","FAIL","","")
-
-        # Usb Test
-        stbUsbInfo = stbPerformUsbTest(self,self.telnetObj)
-        if stbDumpInfo !='':
-            self.ptcHandlingThread.ptc_update_msg("updateUsbTestResult","PASS",stbUsbInfo,"")
-        else:
-            self.ptcHandlingThread.ptc_update_msg("updateUsbTestResult","FAIL","","")
-
-        #Fan test
-        stbFanInfo = stbPerformFanTest(self,self.telnetObj)
-        if stbFanInfo !='':
-            self.ptcHandlingThread.ptc_update_msg("updateFanTestResult","PASS",stbFanInfo,"")
-        else:
-            self.ptcHandlingThread.ptc_update_msg("updateFanTestResult","FAIL","","")
-
-        #Sata test
-        stbHddInfo = stbPerformHddTest(self,self.telnetObj)
-        if stbHddInfo !='':
-            self.ptcHandlingThread.ptc_update_msg("updateHddTestResult","PASS",stbHddInfo,"")
-        else:
-            self.ptcHandlingThread.ptc_update_msg("updateHddTestResult","FAIL","","")
-
-        #Hdmi_output test
-        stbHdmiOutInfo = stbPerformHdmiTest(self, self.telnetObj)
-        if stbHddInfo !='':
-            self.ptcHandlingThread.ptc_update_msg("updateHdmiOuputTestResult","PASS",stbHdmiOutInfo,"")
-        else:
-            self.ptcHandlingThread.ptc_update_msg("updateHdmiOuputTestResult","FAIL","","")
-
-        stbProgramMacAdd = stbProgramMacAddress(self, self.telnetObj)
-        if stbProgramMacAdd !='':
-            self.ptcHandlingThread.ptc_update_msg("updateMacAddressResult","PASS",stbProgramMacAdd,"")
-        else:
-            self.ptcHandlingThread.ptc_update_msg("updateMacAddressResult","FAIL","","")
-
-        stbMocaTestInfo = stbPerformMocaTest(self,self.telnetObj,self.serialObj)
-        if stbMocaTestInfo !='':
-            self.ptcHandlingThread.ptc_update_msg("updateMocaResult","PASS",stbMocaTestInfo,"")
-        else:
-            self.ptcHandlingThread.ptc_update_msg("updateMocaResult","FAIL","","")
-
-        stbZigBeeTestInfo = stbPerformZigBeeTest(self,self.telnetObj,self.serialObj)
-        if stbZigBeeTestInfo !='':
-            self.ptcHandlingThread.ptc_update_msg("updateZigBeeResult","PASS",stbZigBeeTestInfo,"")
-        else:
-            self.ptcHandlingThread.ptc_update_msg("updateZigBeeResult","FAIL","","")
 
     def uiUpdateProcess( self, option,result,value, msg ):
         if(option == "updateClock"):
             self.updateClock(value)
+        elif(option == "updateSerialNumberInfo"):
+            self.updateSerialNumberInfo(result,value,msg)
         elif(option == "updateSoftwareVersion"):
             self.updateSwVersion(result,value)
         elif(option == "updateUecCodeDump"):
@@ -239,12 +278,14 @@ class SkedYesUI(QtGui.QMainWindow):
         self.ui.htpVersionValue.setOverwriteMode(True)
         self.ui.htpVersionValue.setPlainText(text)
         self.ui.htpVersionValue.setReadOnly(True)
+
         if result == "PASS":
             self.ui.htpVersionResult.setStyleSheet(_fromUtf8("QLabel { background-color : green; color : white; }"))
             self.ui.htpVersionResult.setText("PASS")
         else:
             self.ui.htpVersionResult.setStyleSheet(_fromUtf8("QLabel { background-color : red; color : white; }"))
             self.ui.htpVersionResult.setText("FAIL")
+        self.ui.htpVersionResult.show()
 
     def updateUecCodeDump(self,result,text):
         self.ui.dumpUecCodeValue.setOverwriteMode(True)
@@ -256,6 +297,7 @@ class SkedYesUI(QtGui.QMainWindow):
         else:
             self.ui.dumpCodeResult.setStyleSheet(_fromUtf8("QLabel { background-color : red; color : white; }"))
             self.ui.dumpCodeResult.setText("FAIL")
+        self.ui.dumpCodeResult.show()
 
     def updateUsbTestResult(self, result, text):
         self.ui.usbValue.setOverwriteMode(True)
@@ -267,6 +309,7 @@ class SkedYesUI(QtGui.QMainWindow):
         else:
             self.ui.usbResult.setStyleSheet(_fromUtf8("QLabel { background-color : red; color : white; }"))
             self.ui.usbResult.setText("FAIL")
+        self.ui.usbResult.show()
 
     def updateFanTestResult(self, result, text):
 
@@ -279,6 +322,7 @@ class SkedYesUI(QtGui.QMainWindow):
         else:
             self.ui.fanResult.setStyleSheet(_fromUtf8("QLabel { background-color : red; color : white; }"))
             self.ui.fanResult.setText("FAIL")
+        self.ui.fanResult.show()
 
     def updateHddTestResult(self,result,text):
         self.ui.sataValue.setOverwriteMode(True)
@@ -290,6 +334,7 @@ class SkedYesUI(QtGui.QMainWindow):
         else:
             self.ui.sataResult.setStyleSheet(_fromUtf8("QLabel { background-color : red; color : white; }"))
             self.ui.sataResult.setText("FAIL")
+        self.ui.sataResult.show()
 
     def updateHdmiOuputTestResult(self,result,text):
         self.ui.hdmiValue.setOverwriteMode(True)
@@ -301,7 +346,7 @@ class SkedYesUI(QtGui.QMainWindow):
         else:
             self.ui.hdmiResult.setStyleSheet(_fromUtf8("QLabel { background-color : red; color : white; }"))
             self.ui.hdmiResult.setText("FAIL")
-
+        self.ui.hdmiResult.show()
 
     def updateMacAddressResult(self,result,text):
         self.ui.dutMacAddress.setOverwriteMode(True)
@@ -313,6 +358,7 @@ class SkedYesUI(QtGui.QMainWindow):
         else:
             self.ui.macResult.setStyleSheet(_fromUtf8("QLabel { background-color : red; color : white; }"))
             self.ui.macResult.setText("FAIL")
+        self.ui.macResult.show()
 
     def updateMocaResult(self,result,text):
         self.ui.dutMocaRestult.setOverwriteMode(True)
@@ -324,6 +370,7 @@ class SkedYesUI(QtGui.QMainWindow):
         else:
             self.ui.mocaResult.setStyleSheet(_fromUtf8("QLabel { background-color : red; color : white; }"))
             self.ui.mocaResult.setText("FAIL")
+        self.ui.mocaResult.show()
 
     def updateZigBeeResult(self,result,text):
         self.ui.dutZigbeeResult.setOverwriteMode(True)
@@ -335,8 +382,9 @@ class SkedYesUI(QtGui.QMainWindow):
         else:
             self.ui.zigbeeResult.setStyleSheet(_fromUtf8("QLabel { background-color : red; color : white; }"))
             self.ui.zigbeeResult.setText("FAIL")
+        self.ui.zigbeeResult.show()
 
-    def updateSerialNumberInfo(self,caId,chipNumber):
+    def updateSerialNumberInfo(self,result,caId,chipNumber):
         self.ui.caStbIdValueLabel.setStyleSheet(_fromUtf8("QLabel { background-color : white; color : green; }"))
         self.ui.caChipNumValueLabel.setStyleSheet(_fromUtf8("QLabel { background-color : white; color : green; }"))
         self.ui.caStbIdValueLabel.setText(caId)
@@ -371,6 +419,7 @@ def stbPerformMocaTest(app,tel,ser):
     print data
     print "going to wait for 15 secs to complete the THROUGHPUT test "
     time.sleep(15)
+    tel.telWrite(command_list[TestCommnad.MOCA_TEST_CMD3])
     data = tel.telReadSocket(app)
     match = re.search(findstr,data)
     print [data]
@@ -465,6 +514,54 @@ def stbPerformZigBeeTest(app,tel,ser):
         return data
     else:
         return ''
+
+def stbPerformChannelPowerTesting(app,tel,ser,initMode,chnum,chNumUpdate):
+    findstrInit = "PAN"
+    findCwustr= "Continuous Wave Unmodulated"
+
+    if initMode:
+        tel.telWrite('\x03') #ctrl + c
+        time.sleep(.2)
+        tel.telWrite(command_list[TestCommnad.RF_TEST_INIT_COMMAND])
+        time.sleep(2)
+        data = tel.telReadSocket(app)
+        match = re.search(findstrInit,data)
+        print [data]
+        if match:
+            #Init done
+        tel.telWrite(command_list[TestCommnad.RF_ANT_SEL_CMD])
+        time.sleep(1)
+        data = tel.telReadSocket(app)
+        #Antenna Select OK
+    else:# Disable the Continuous Wave
+        tel.telWrite(command_list[TestCommnad.DUT_CH_PWR_TEST_STAT_CMD2])
+        time.sleep(1)
+        data = tel.telReadSocket(app)
+        print data
+
+    # Set teh channel number
+    cmd = command_list[TestCommnad.RF_CH_SEL_CMD] + chnum #channel number
+    tel.telWrite(cmd)
+    time.sleep(1)
+    data = tel.telReadSocket(app)
+    #Channel Set OK
+
+    #Enable the Continuous Unmodulated wave
+    tel.telWrite(command_list[TestCommnad.DUT_CH_PWR_TEST_STAT_CMD1])
+    time.sleep(1)
+    data = tel.telReadSocket(app)
+    match = re.search(findCwustr,data)
+    if match:
+        print [data]
+
+def stbStopChannelPowerTesting(app,tel,ser):
+    # Disable the Continuous Wave
+    tel.telWrite(command_list[TestCommnad.DUT_CH_PWR_TEST_STAT_CMD2])
+    time.sleep(1)
+    data = tel.telReadSocket(app)
+    print data
+    tel.telWrite('\x03') #ctrl + c
+    time.sleep(1)    
 
 def stbPrepareGsRfTest(app,ser):
 
@@ -578,17 +675,24 @@ def stbDumpUecCode(app,tel) :
 
 def stbGetSerialNumber(app, tel):
 
-    snfindString= "generateSTBSN"
+    snfindString= "/root/htp/generateSTBSN"
     tel.telWrite(command_list[TestCommnad.GET_STBSN])
     time.sleep(1)
     data = tel.telReadSocket(app)
-    print [data]
-    stbid = (data[36:52])
-    print [stbid]
-    chipNum = (data[53:61])
-    print [chipNum]
-    snInfo= [stbid, chipNum ]
+    if data:
+        match = re.search(snfindString,data)
+        if match:
+            data = re.sub(snfindString,'', data) # descard snfindString
+            data = re.sub('root','', data) # descard snfindString
+            data = re.sub('\W+','', data)
+            data = re.sub('r','', data)
+            print [data]
 
+        stbid = (data[0:16])
+        print [stbid]
+        chipNum = (data[16:24])
+        print [chipNum]
+        snInfo= [stbid, chipNum ]
     return snInfo
 
 
@@ -617,82 +721,6 @@ def stbGetMacAddress( app, tel) :
 
 
 
-
-def stbDiseqcSettings(app,tel, diseqcObj):
-    print "Diseqc Settings is called "
-    if((diseqcObj.lnb22KhzTone == 1) and (diseqcObj.lnbVoltage == 13 )):
-        tel.telWrite(command_list[TestCommnad.LNB_LOW_22K_ON])
-        time.sleep(1)
-        data = tel.telReadSocket(app)
-    elif((diseqcObj.lnb22KhzTone == 0) and (diseqcObj.lnbVoltage == 13 )):
-        tel.telWrite(command_list[TestCommnad.LNB_LOW_22K_OFF])
-        time.sleep(1)
-        data = tel.telReadSocket(app)
-    elif((diseqcObj.lnb22KhzTone == 1) and (diseqcObj.lnbVoltage == 18 )):
-        tel.telWrite(command_list[TestCommnad.LNB_HIGH_22K_ON])
-        time.sleep(1)
-        data = tel.telReadSocket(app)
-    else:
-        tel.telWrite(command_list[TestCommnad.LNB_HIGH_22K_OFF])
-        time.sleep(1)
-        data = tel.telReadSocket(app)
-
-
-
-def stbPerformTunerTest(app,tel):
-
-    currentProgressbarValue = 20
-    TunerTestProgress = 1
-    tunerPassString = "Decoding sat"
-    tunerFailString = "No channels found"
-    app.ptc_update_msg("updateTunerTestProgress","Test Initiated",str(currentProgressbarValue))
-    tel.telWrite(command_list[TestCommnad.TUNE_TEST])
-    time.sleep(1)
-    currentProgressbarValue = currentProgressbarValue + 20
-    app.ptc_update_msg("updateTunerTestProgress","Test Progress",str(currentProgressbarValue))
-    time.sleep(3)
-    data = tel.telReadSocket(app)
-    #print list(data)
-    match = re.search(tunerPassString,data)
-    if match:
-        currentProgressbarValue = 100
-        app.ptc_update_msg("updateTunerTestProgress","Test Done",str(currentProgressbarValue))
-        return 1
-    else:
-        match1 = re.search(tunerFailString,data)
-        if match1:
-            currentProgressbarValue = 100
-            app.ptc_update_msg("updateTunerTestProgress","Test Done",str(currentProgressbarValue))
-            return 0
-        else:
-            while TunerTestProgress:
-                data = tel.telReadSocket(app)
-                print list(data)
-                print data
-                match = re.search(tunerPassString,data)
-                if match:
-                    TunerTestProgress = 0
-                    currentProgressbarValue = 100
-                    app.ptc_update_msg("updateTunerTestProgress","Test Done",str(currentProgressbarValue))
-                    return 1
-                else:
-                    match1 = re.search(tunerFailString,data)
-                    if match1:
-                        currentProgressbarValue = 100
-                        TunerTestProgress = 0
-                        app.ptc_update_msg("updateTunerTestProgress","Test Done",str(currentProgressbarValue))
-                        return 0
-                    else:
-                        currentProgressbarValue = currentProgressbarValue + 20
-                        app.ptc_update_msg("updateTunerTestProgress","Test Progress ",str(currentProgressbarValue))
-                        continue
-
-
-
-
-def stbStopTunerTest(app,tel):
-    tel.telWrite('\x03') #ctrl + c
-    print ("Tuner_Test_Stopped")
 
 
 def stbPerformFanTest(app,tel):
@@ -851,201 +879,6 @@ def stbStopHddTest(app,tel):
     tel.telWrite('\x03') #ctrl + c
 
 
-def stbPerformLedTest(app,tel):
-    #Send Ctrl C to stop previous running tests
-    tel.telWrite('\x03') #ctrl + c
-    retry = 1
-    retrycnt = 0
-    currentProgressbarValue = 20
-    ledPassString = "LED all on"
-    app.ptc_update_msg("updateLedTestProgress","Test Initiated",str(currentProgressbarValue))
-    command_list[TestCommnad.LED_TEST] = "led 0"
-    tel.telWrite(command_list[TestCommnad.LED_TEST])
-    time.sleep(2)
-    command_list[TestCommnad.LED_TEST] = "led 1"
-    tel.telWrite(command_list[TestCommnad.LED_TEST])
-    data = tel.telReadSocket(app)
-    time.sleep(2)
-    #print list(data)
-    match = re.search(ledPassString,data)
-    if match:
-        currentProgressbarValue = 100
-        app.ptc_update_msg("updateLedTestProgress","Led Test Passed ",str(currentProgressbarValue))
-        return 1
-    else:
-        while retry :
-            data = tel.telReadSocket(app)
-            time.sleep(2)
-            #print list(data)
-            match = re.search(ledPassString,data)
-            if match:
-                retry = 0
-                currentProgressbarValue = 100
-                app.ptc_update_msg("updateLedTestProgress","Led Test Passed ",str(currentProgressbarValue))
-                return 1
-            else:
-                if(retrycnt > 5):
-                    currentProgressbarValue =  currentProgressbarValue + 6
-                    app.ptc_update_msg("updateLedTestProgress","Led Test Failed ",str(currentProgressbarValue))
-                    return 0
-                retrycnt = retrycnt + 1
-                continue
-
-
-
-
-def stbStopLedTest(app,tel):
-    print("Led Test Stopped")
-    command_list[TestCommnad.LED_TEST] = "led 0"
-    tel.telWrite(command_list[TestCommnad.LED_TEST])
-    time.sleep(2)
-
-
-def stbPerformFpTest(app,tel):
-    retry = 1
-    retrycnt = 0
-    #Send Ctrl C to stop previous running tests
-    tel.telWrite('\x03') #ctrl + c
-    currentProgressbarValue = 20
-    fpPassString = "act_gridon"
-    app.ptc_update_msg("updateFpTestProgress","Test Initiated",str(currentProgressbarValue))
-    command_list[TestCommnad.VFD_TEST] = "/root/htp/vfd -r -i -x 0"
-    tel.telWrite(command_list[TestCommnad.VFD_TEST])
-    time.sleep(2)
-    command_list[TestCommnad.VFD_TEST] = "/root/htp/vfd -r -i -x 1"
-    tel.telWrite(command_list[TestCommnad.VFD_TEST])
-    data = tel.telReadSocket(app)
-    time.sleep(2)
-    #print list(data)
-    match = re.search(fpPassString,data)
-    if match:
-        currentProgressbarValue = 100
-        app.ptc_update_msg("updateFpTestProgress","FP Test Passed ",str(currentProgressbarValue))
-        return 1
-    else:
-        return 0
-
-
-def stbStopFpTest(app,tel):
-    print("Fp Test Stopped")
-    command_list[TestCommnad.VFD_TEST] = "/root/htp/vfd -r -i -x 0"
-    tel.telWrite(command_list[TestCommnad.VFD_TEST])
-    time.sleep(2)
-
-
-def stbPerformIrTest(app,tel):
-    retry = 1
-    retrycnt = 0
-    #Send Ctrl C to stop previous running tests
-    tel.telWrite('\x03') #ctrl + c
-    currentProgressbarValue = 20
-    irPassString = "IR test: pass"
-    irFailString = "IR test: failed"
-    app.ptc_update_msg("updateIrTestProgress","Test Initiated",str(currentProgressbarValue))
-    tel.telWrite(command_list[TestCommnad.IR_TEST])
-    time.sleep(5)
-    data = tel.telReadSocket(app)
-    #print list(data)
-    match = re.search(irPassString,data)
-    if match:
-        currentProgressbarValue = 100
-        app.ptc_update_msg("updateIrTestProgress","IR Test Passed ",str(currentProgressbarValue))
-        return 1
-    else:
-        match = re.search(irFailString,data)
-        if match:
-            currentProgressbarValue = 100
-            app.ptc_update_msg("updateIrTestProgress","IR Test Failed ",str(currentProgressbarValue))
-            return 0
-        else:
-            while retry :
-                data = tel.telReadSocket(app)
-                time.sleep(2)
-                #print list(data)
-                match = re.search(irPassString,data)
-                if match:
-                    retry = 0
-                    currentProgressbarValue = 100
-                    app.ptc_update_msg("updateIrTestProgress","IR Test Passed ",str(currentProgressbarValue))
-                    return 1
-                else:
-                    match = re.search(irFailString,data)
-                    if match:
-                        currentProgressbarValue = 100
-                        app.ptc_update_msg("updateIrTestProgress","IR Test Failed ",str(currentProgressbarValue))
-                        return 0
-                    elif(retrycnt > 5):
-                        currentProgressbarValue =  currentProgressbarValue + 6
-                        app.ptc_update_msg("updateIrTestProgress","Waiting for IR-Key Press ",str(currentProgressbarValue))
-                        return 0
-                retrycnt = retrycnt + 1
-                continue
-
-
-
-
-def stbStopIrTest(app,tel):
-    print("IR Test Stopped")
-    tel.telWrite(command_list[TestCommnad.STOP_TUNE_TEST]) # ctrl +c to stop
-    time.sleep(2)
-
-def stbPerformButtonTest(app,tel):
-    retry = 1
-    retrycnt = 0
-    #Send Ctrl C to stop previous running tests
-    tel.telWrite('\x03') #ctrl + c
-    currentProgressbarValue = 20
-    buttonPassString = "Button1 pass 1"
-    buttonFailString = "Button1 Failed 0"
-    app.ptc_update_msg("updateButtonTestProgress","Test Initiated",str(currentProgressbarValue))
-    tel.telWrite(command_list[TestCommnad.BUTTON_TEST])
-    time.sleep(.5)
-    data = tel.telReadSocket(app)
-    time.sleep(.5)
-    #print list(data)
-    match = re.search(buttonPassString,data)
-    if match:
-        currentProgressbarValue = 100
-        app.ptc_update_msg("updateButtonTestProgress","Button Test Passed ",str(currentProgressbarValue))
-        return 1
-    else:
-        match = re.search(buttonFailString,data)
-        if match:
-            currentProgressbarValue = 100
-            app.ptc_update_msg("updateButtonTestProgress","Button Test Failed ",str(currentProgressbarValue))
-            return 0
-        else:
-            while retry :
-                data = tel.telReadSocket(app)
-                time.sleep(2)
-                #print list(data)
-                match = re.search(buttonPassString,data)
-                if match:
-                    retry = 0
-                    currentProgressbarValue = 100
-                    app.ptc_update_msg("updateButtonTestProgress","Button Test Passed ",str(currentProgressbarValue))
-                    return 1
-                else:
-                    match = re.search(buttonFailString,data)
-                    if match:
-                        currentProgressbarValue = 100
-                        app.ptc_update_msg("updateButtonTestProgress","Button Test Failed ",str(currentProgressbarValue))
-                        return 0
-                    elif(retrycnt > 5):
-                        currentProgressbarValue =  currentProgressbarValue + 6
-                        app.ptc_update_msg("updateButtonTestProgress","Waiting for button Press ",str(currentProgressbarValue))
-                        return 0
-                retrycnt = retrycnt + 1
-                continue
-
-
-
-
-def stbStopButtonTest(app,tel):
-    print("Button Test Stopped")
-    tel.telWrite(command_list[TestCommnad.STOP_TUNE_TEST]) # ctrl +c to stop
-    time.sleep(2)
-
 
 def forceCloseApp():
     print "App Closed force"
@@ -1061,25 +894,7 @@ if __name__ == "__main__":
     app = QtGui.QApplication(sys.argv)
     myapp = SkedYesUI()
     myapp.setWindowTitle(_translate("SkedYes", "SKED YES V1.03", None))
-
-
     myapp.show()
-    #myapp.updateConnectionStatus("Not Connected ")
-    '''
-    buildCommandList()
-    tel.telWrite("ls \n")
-    data = tel.telReadSocket(myapp)
-    print data
-    getSerialNumber(myapp, tel)
-    getMacAddress(myapp, tel)
-    performHDDTest(myapp, tel)
-
-    skedPtcAppThread.startThread()
-    skedPtcAppThread.start()
-    '''
-    #QtCore.QObject.connect(self.StartButton, QtCore.SIGNAL(_fromUtf8("clicked()")), self.labelHDDTestSetFocus)
-    #QtCore.QObject.connect(myapp.ui.StopButton, QtCore.SIGNAL(_fromUtf8("clicked(bool)")), disconectTheSTB)
     QtCore.QObject.connect(app, QtCore.SIGNAL(_fromUtf8("lastWindowClosed()")),forceCloseApp)
-    #QtCore.QObject.connect(myapp.ui.StartButton, QtCore.SIGNAL(_fromUtf8("clicked()")), connectTheSTB)
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     sys.exit(app.exec_())
