@@ -772,6 +772,22 @@
      <number>0</number>
     </property>
    </widget>
+   <widget class="QLabel" name="powerTestValue">
+    <property name="geometry">
+     <rect>
+      <x>390</x>
+      <y>140</y>
+      <width>181</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+    <property name="alignment">
+     <set>Qt::AlignJustify|Qt::AlignVCenter</set>
+    </property>
+   </widget>
   </widget>
   <widget class="QTextEdit" name="usbValue">
    <property name="geometry">

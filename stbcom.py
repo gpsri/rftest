@@ -188,7 +188,10 @@ class SkedSerial():
     def telWrite(self,string):
         try:
             print("Going To write " + string)
-            self.serial.write(string + "\r\n")
+            if string == '\x03':
+                self.serial.write('\x03')
+            else:
+                self.serial.write(string + "\r\n")
         except:
             time.sleep(1)
 

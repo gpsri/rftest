@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'rftest.ui'
 #
-# Created by: PyQt4 UI code generator 4.12.1
+# Created by: PyQt4 UI code generator 4.12.3
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -301,6 +301,11 @@ class Ui_rftestui(object):
         self.zigbeeResult.setWordWrap(True)
         self.zigbeeResult.setIndent(0)
         self.zigbeeResult.setObjectName(_fromUtf8("zigbeeResult"))
+        self.powerTestValue = QtGui.QLabel(self.rfTestGroup)
+        self.powerTestValue.setGeometry(QtCore.QRect(390, 140, 181, 31))
+        self.powerTestValue.setText(_fromUtf8(""))
+        self.powerTestValue.setAlignment(QtCore.Qt.AlignJustify|QtCore.Qt.AlignVCenter)
+        self.powerTestValue.setObjectName(_fromUtf8("powerTestValue"))
         self.usbValue = QtGui.QTextEdit(rftestui)
         self.usbValue.setGeometry(QtCore.QRect(120, 132, 172, 22))
         font = QtGui.QFont()
