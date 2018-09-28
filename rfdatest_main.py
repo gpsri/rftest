@@ -140,13 +140,16 @@ class SkedYesUI(QtGui.QMainWindow):
 
     def initResetDefaultValues(self):
         ports = list(port_list.comports())
+        #if sys.platform == "linux2" or sys.platform == "linux":
         for p in ports:
-            print (p)
-        self.ui.goldenSampleIfList.addItem("COM1")
-        self.ui.goldenSampleIfList.addItem("COM2")
-        self.ui.goldenSampleIfList.addItem("COM3")
-        self.ui.goldenSampleIfList.addItem("COM4")
-        self.ui.goldenSampleIfList.addItem("COM5")
+            if(p[2] != 'n/a'):
+                self.ui.goldenSampleIfList.addItem(str(p[0]))
+        #else: # windows
+
+        #self.ui.goldenSampleIfList.addItem("COM2")
+        #self.ui.goldenSampleIfList.addItem("COM3")
+        #self.ui.goldenSampleIfList.addItem("COM4")
+        #self.ui.goldenSampleIfList.addItem("COM5")
         self.ui.dutIpAddressText.setPlainText("192.192.192.2")
 
 
@@ -163,6 +166,7 @@ class SkedYesUI(QtGui.QMainWindow):
     def connectToGsStb(self):
         print "Connecting to COM Port  ... "
         comport = str(self.ui.goldenSampleIfList.currentText())
+        '''
         print sys.platform
         if sys.platform == "linux2" or sys.platform == "linux":
             if comport == 'COM1':
@@ -177,7 +181,7 @@ class SkedYesUI(QtGui.QMainWindow):
                 comport = '/dev/ttyUSB4'
             else:
                 comport = "COM1"
-
+        '''        
         self.serialObj = SkedSerial(comport)
 
         print "Connected "

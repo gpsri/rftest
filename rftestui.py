@@ -119,7 +119,7 @@ class Ui_rftestui(object):
         self.fanResult.setIndent(0)
         self.fanResult.setObjectName(_fromUtf8("fanResult"))
         self.goldenSampleIfList = QtGui.QComboBox(rftestui)
-        self.goldenSampleIfList.setGeometry(QtCore.QRect(160, 10, 72, 22))
+        self.goldenSampleIfList.setGeometry(QtCore.QRect(130, 10, 112, 22))
         font = QtGui.QFont()
         font.setPointSize(9)
         self.goldenSampleIfList.setFont(font)
