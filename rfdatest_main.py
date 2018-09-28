@@ -158,7 +158,15 @@ class getPTCThread(QThread):
         #Fan test
         stbFanInfo = stbPerformFanTest(self,self.telnetObj)
         if stbFanInfo !='':
-            self.ptc_update_msg("updateFanTestResult","PASS",stbFanInfo,"")
+            speedlist = re.findall(r'\d+', stbFanInfo)
+            speedValue = int(speedlist[0])
+            stbFanInfo = "SPEED : " + "%s"  % speedValue
+            if speedValue < 2150 or speedValue > 4150:
+                resultValue = 0
+                self.ptc_update_msg("updateFanTestResult","FAIL",stbFanInfo,"")
+            else:
+                resultValue = 1
+                self.ptc_update_msg("updateFanTestResult","PASS",stbFanInfo,"")
         else:
             self.ptc_update_msg("updateFanTestResult","FAIL","","")
 
@@ -189,8 +197,20 @@ class getPTCThread(QThread):
             self.ptc_update_msg("updateMocaResult","FAIL","","")
 
         stbZigBeeTestInfo = stbPerformZigBeeTest(self,self.telnetObj,self.serialObj)
+
         if stbZigBeeTestInfo !='':
-            self.ptc_update_msg("updateZigBeeResult","PASS",stbZigBeeTestInfo,"")
+            resultList = re.findall(r'\d+', stbZigBeeTestInfo)
+            rxVal = int(resultList[0])
+            avgRSSI = int(resultList[1])
+            avgLQI = int(resultList[2])
+            print rxVal
+            print avgRSSI
+            print avgLQI
+            stbZigBeeTestInfo = "RX ="+str(rxVal)+ ":" + "Avg RSSI:"+ str(avgRSSI) + " Avg LQI:" + str(avgLQI)
+            if rxVal == 0 and avgLQI == 0:
+                self.ptc_update_msg("updateZigBeeResult","FAIL",stbZigBeeTestInfo,"")
+            else:
+                self.ptc_update_msg("updateZigBeeResult","PASS",stbZigBeeTestInfo,"")
         else:
             self.ptc_update_msg("updateZigBeeResult","FAIL","","")
 
@@ -252,7 +272,7 @@ class SkedYesUI(QtGui.QMainWindow):
         print str(self.serialObj)
         print "connectToGsStb : Connected "
         self.updateGsConnectionStatus("Connected")
-        stbPrepareGsRfTest(self,self.serialObj)
+        #stbPrepareGsRfTest(self,self.serialObj)
 
     def clearTestResults(self):
         self.ui.caChipNumValueLabel.clear()
@@ -627,10 +647,19 @@ def stbPerformZigBeeTest(app,tel,ser):
     time.sleep(1)
     ser.serWrite('\x03') #ctrl + c
     time.sleep(1)
+    value = data.split('\n')
+    for i in value:
+        print [i]
 
     if respondFound:
-        data = re.sub('\W+','', data)
-        return data
+        # Expected response:
+        #RX 1000 - Check this line
+        #TX OK 0
+        #TX Fail 0
+        strRX = str(value[1])
+        strRSSI = str (value[4])
+        retValue = strRX + strRSSI
+        return retValue
     else:
         print " Return msg 2"
         return ''
@@ -895,7 +924,7 @@ def stbGetMacAddress( app, tel) :
 def stbPerformFanTest(app,tel):
     currentProgressbarValue = 20
     fanPassString = "speed:"
-    resultValue = 0
+    resultValue = ''
     #Send Ctrl C to stop previous running tests
     tel.telWrite('\x03') #ctrl + c
     time.sleep(.2)
@@ -906,31 +935,18 @@ def stbPerformFanTest(app,tel):
     tel.telWrite(command_list[TestCommnad.FAN_TEST_CMD3])
     time.sleep(.2)
     tel.telWrite(command_list[TestCommnad.FAN_TEST_CMD4])
-    time.sleep(.2)
-    tel.telWrite(command_list[TestCommnad.FAN_TEST_CMD5])
     time.sleep(3)
+    tel.telWrite(command_list[TestCommnad.FAN_TEST_CMD5])
+    time.sleep(2)
     data = tel.telReadSocket(app)
     #print list(data)
     match = re.search(fanPassString,data)
     if match:
         speed = data[(data.find(fanPassString)): (data.find(fanPassString)) + 15]
-        speedlist = re.findall(r'\d+', speed)
-        speedValue = int(speedlist[0])
-        if speedValue < 2150 or speedValue > 4150:
-            resultValue = 0
-        else:
-            resultValue = 1
-
-        msgStr = "SPEED : " + "%s"  % speedValue
-        print msgStr
-        stbStopFanTest(app,tel)
-        if resultValue:
-            return msgStr
-        else:
-            return ''
-    else:
-        stbStopFanTest(app,tel)
-        return ''
+        resultValue = speed
+            
+    stbStopFanTest(app,tel)
+    return resultValue
 
 
 def stbStopFanTest(app,tel):
