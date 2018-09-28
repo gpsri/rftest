@@ -140,16 +140,10 @@ class SkedYesUI(QtGui.QMainWindow):
 
     def initResetDefaultValues(self):
         ports = list(port_list.comports())
-        #if sys.platform == "linux2" or sys.platform == "linux":
         for p in ports:
             if(p[2] != 'n/a'):
                 self.ui.goldenSampleIfList.addItem(str(p[0]))
-        #else: # windows
 
-        #self.ui.goldenSampleIfList.addItem("COM2")
-        #self.ui.goldenSampleIfList.addItem("COM3")
-        #self.ui.goldenSampleIfList.addItem("COM4")
-        #self.ui.goldenSampleIfList.addItem("COM5")
         self.ui.dutIpAddressText.setPlainText("192.192.192.2")
 
 
@@ -181,10 +175,11 @@ class SkedYesUI(QtGui.QMainWindow):
                 comport = '/dev/ttyUSB4'
             else:
                 comport = "COM1"
-        '''        
+        '''
         self.serialObj = SkedSerial(comport)
 
-        print "Connected "
+        print str(self.serialObj)
+        print "connectToGsStb : Connected "
         self.updateGsConnectionStatus("Connected")
         stbPrepareGsRfTest(self,self.serialObj)
 
@@ -472,29 +467,29 @@ def stbPerformZigBeeTest(app,tel,ser):
     print "DUT Setup Done "
     print "Golden Sample Setup start "
     #send the Command to Golden Sample
-    ser.telWrite('\x03') #ctrl + c
+    ser.serWrite('\x03') #ctrl + c
     time.sleep(.2)
-    ser.telWrite(command_list[TestCommnad.RF_TEST_INIT_COMMAND])
+    ser.serWrite(command_list[TestCommnad.RF_TEST_INIT_COMMAND])
     time.sleep(2)
-    data = ser.telReadSocket(app)
+    data = ser.serRead(app)
     match = re.search(findstrInit,data)
     print [data]
     if match:
         #Init done
         cmd = command_list[TestCommnad.RF_CH_SEL_CMD] + "20" #channel number
-        ser.telWrite(cmd)
+        ser.serWrite(cmd)
         time.sleep(1)
-        data = ser.telReadSocket(app)
+        data = ser.serRead(app)
         #Channel Set OK
-        ser.telWrite(command_list[TestCommnad.RF_ANT_SEL_CMD])
+        ser.serWrite(command_list[TestCommnad.RF_ANT_SEL_CMD])
         time.sleep(1)
-        data = ser.telReadSocket(app)
-        ser.telWrite(command_list[TestCommnad.GS_ZIGBEE_PING_TEST_CMD1])
+        data = ser.serRead(app)
+        ser.serWrite(command_list[TestCommnad.GS_ZIGBEE_PING_TEST_CMD1])
         time.sleep(1)
-        data = ser.telReadSocket(app)
-        ser.telWrite(command_list[TestCommnad.GS_ZIGBEE_PING_TEST_CMD2])
+        data = ser.serRead(app)
+        ser.serWrite(command_list[TestCommnad.GS_ZIGBEE_PING_TEST_CMD2])
         time.sleep(1)
-        data = ser.telReadSocket(app)
+        data = ser.serRead(app)
         print data
 
     print "going to wait for 10 secs to complete the ZIGBEE test "
@@ -514,7 +509,7 @@ def stbPerformZigBeeTest(app,tel,ser):
     tel.telWrite(command_list[TestCommnad.DUT_ZIGBEE_PING_TEST_STOP_CMD])
     time.sleep(1)
     data1 = tel.telReadSocket(app)
-    ser.telWrite('\x03') #ctrl + c
+    ser.serWrite('\x03') #ctrl + c
     time.sleep(.2)
     tel.telWrite('\x03') #ctrl + c
     time.sleep(.2)
@@ -575,16 +570,17 @@ def stbPrepareGsRfTest(app,ser):
 
     # Write MAC Address
     statusStr = "Write MAC successfully"
-
-    ser.telWrite('\x03') #ctrl + c
+    print " stbPrepareGsRfTest "
+    ser.serWrite('\x03') #ctrl + c
     time.sleep(1)
     write_cmd = command_list[TestCommnad.WRITE_MAC] +" "+"001222FFFF30"
-    ser.telWrite(write_cmd)
+    ser.serWrite(write_cmd)
     time.sleep(1)
+    print "stbPrepareGsRfTest : serWrite MAC ADDRESS  DONE - waiting for feedback "
     print time.time()
     waitforfind = 1
     while waitforfind:
-        data = ser.telReadSocket(app)
+        data = ser.serRead(app)
         match = re.search(statusStr,data)
         if match :
             waitforfind = 0
@@ -592,32 +588,32 @@ def stbPrepareGsRfTest(app,ser):
 
     #Config the network
     write_cmd = "ifconfig eth0 192.192.192.1"
-    ser.telWrite(write_cmd)
+    ser.serWrite(write_cmd)
     time.sleep(1)
-    data = ser.telReadSocket(app)
+    data = ser.serRead(app)
     print data
     write_cmd = "ifconfig eth1 192.192.168.1"
-    ser.telWrite(write_cmd)
+    ser.serWrite(write_cmd)
     time.sleep(1)
-    data = ser.telReadSocket(app)
+    data = ser.serRead(app)
     print data
 
     write_cmd = "/root/bin/init_moca"
-    ser.telWrite(write_cmd)
+    ser.serWrite(write_cmd)
     time.sleep(1)
-    data = ser.telReadSocket(app)
+    data = ser.serRead(app)
     print data
 
     write_cmd = "iperf -s &"
-    ser.telWrite(write_cmd)
+    ser.serWrite(write_cmd)
     time.sleep(1)
-    data = ser.telReadSocket(app)
+    data = ser.serRead(app)
     print data
 
     write_cmd = "pstree"
-    ser.telWrite(write_cmd)
+    ser.serWrite(write_cmd)
     time.sleep(1)
-    data = ser.telReadSocket(app)
+    data = ser.serRead(app)
     print data
 
 

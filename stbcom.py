@@ -172,31 +172,52 @@ class SkedTelnet():
 #password = getpass.getpass()
 class SkedSerial():
     def __init__(self,comport):
-        ser = serial.Serial(
-            port=comport,
-            baudrate=115200,
-            parity=serial.PARITY_NONE,
-            stopbits=serial.STOPBITS_ONE,
-            bytesize=serial.EIGHTBITS,
-            xonxoff = False,
-            rtscts = True
-        )
-        ser.isOpen()
+        if sys.platform == "linux2" or sys.platform == "linux":
+            ser = serial.Serial(
+                port=comport,
+                baudrate=115200,
+                parity=serial.PARITY_NONE,
+                stopbits=serial.STOPBITS_ONE,
+                bytesize=serial.EIGHTBITS,
+                xonxoff = False,
+                rtscts = True,
+                )
+        else:
+            print "open for windows "
+            ser = serial.Serial(
+                port=comport,
+                baudrate=115200,
+                parity=serial.PARITY_NONE,
+                stopbits=serial.STOPBITS_ONE,
+                bytesize=serial.EIGHTBITS,
+                )
+
+        if(ser.isOpen()):
+            print "init OK "
+        ser.close()
+        time.sleep(1)
+        ser.open()
         self.serial = ser
+
         #print tn.read_until("gps")
 
-    def telWrite(self,string):
+    def serWrite(self,string):
+
+        #self.serial.reset_output_buffer()
         try:
-            print("Going To write " + string)
+            print [string]
             if string == '\x03':
-                self.serial.write('\x03')
+                print "1"
+                size = self.serial.write('\x03')
             else:
-                self.serial.write(string + "\r\n")
+                print "2"
+                size = self.serial.write(string + "\r\n")
+            print "3"
         except:
             time.sleep(1)
 
-    def telReadSocket(self,app):
-        print "telReadSocket"
+    def serRead(self,app):
+        #print "serRead"
         try:
             data = ''
             while self.serial.inWaiting() > 0:
