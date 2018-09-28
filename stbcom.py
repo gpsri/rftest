@@ -100,7 +100,7 @@ def buildCommandList():
     command_list.append("changeToUECFW") # UEC_FW_CODE_SWAP = 32
     command_list.append("cd /root/htp" ) # SET_OTP_CMD1 = 33
     command_list.append("otp_bl -w -s all") # SET_OTP_CMD2 = 34
-    command_list.append("/root/htp/graphics_as_video") # HDMI_OUTPUT_TEST =35
+    command_list.append("/root/htp/graphics_as_video & ") # HDMI_OUTPUT_TEST =35
     command_list.append("write_mac.sh") # WRITE_MAC = 36
     command_list.append("ifconfig eth1 192.192.168.10") # MOCA_TEST_CMD1 = 37
     command_list.append("init_moca") # MOCA_TEST_CMD2 = 38
