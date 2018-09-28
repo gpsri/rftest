@@ -252,7 +252,7 @@ class SkedYesUI(QtGui.QMainWindow):
         print str(self.serialObj)
         print "connectToGsStb : Connected "
         self.updateGsConnectionStatus("Connected")
-        #stbPrepareGsRfTest(self,self.serialObj)
+        stbPrepareGsRfTest(self,self.serialObj)
 
     def clearTestResults(self):
         self.ui.caChipNumValueLabel.clear()
@@ -892,9 +892,6 @@ def stbGetMacAddress( app, tel) :
             continue
 
 
-
-
-
 def stbPerformFanTest(app,tel):
     currentProgressbarValue = 20
     fanPassString = "speed:"
@@ -1075,7 +1072,7 @@ except AttributeError:
 if __name__ == "__main__":
     app = QtGui.QApplication(sys.argv)
     myapp = SkedYesUI()
-    myapp.setWindowTitle(_translate("SkedYes", "SKED YES V1.03", None))
+    myapp.setWindowTitle(_translate("RFTEST", "SKED YES V1.04", None))
     myapp.show()
     QtCore.QObject.connect(app, QtCore.SIGNAL(_fromUtf8("lastWindowClosed()")),forceCloseApp)
     signal.signal(signal.SIGINT, signal.SIG_DFL)
