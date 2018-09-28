@@ -7,6 +7,7 @@ from stbcom import TestCommnad, SkedTelnet, buildCommandList, command_list,SkedS
 import socket, select, string, threading, time
 from threading import Thread, Lock
 import xml.etree.ElementTree as ET
+import serial.tools.list_ports as port_list
 #from sklearn import tree
 import re
 import signal
@@ -35,7 +36,6 @@ class getPTCThread(QThread):
         self.msg = msg
         self.telnetObj = telnetObj
         self.serialObj = serialObj
-        self.powerTestMode = 0
 
     def __del__(self):
         self.wait()
@@ -49,17 +49,6 @@ class getPTCThread(QThread):
             print " %s " % msg
             if(msg == "startRfTest"):
                 self.ptcPerformRfTest()
-            elif(msg == "stopRfPowerTest"):
-                self.ptcRfPowerTestStop()
-            elif(msg == "startRfPowerTestCh11"):
-                self.ptcPerformRfPowerTestCh11()
-            elif(msg == "startRfPowerTestCh15"):
-                self.ptcPerformRfPowerTestCh15()
-            elif(msg == "startRfPowerTestCh20"):
-                self.ptcPerformRfPowerTestCh20()
-            elif(msg == "startRfPowerTestCh25"):
-                self.ptcPerformRfPowerTestCh25()
-
             self.sleep(1)
             self.msgQ.task_done()
 
@@ -67,64 +56,6 @@ class getPTCThread(QThread):
         self.runThread = 1
     def stopThread(self):
         self.runThread = 0
-
-    def ptcRfPowerTestStop(self):
-        if self.powerTestMode != 0 :
-            self.powerTestMode = 0
-            stbPowerTestInfo = stbStopChannelPowerTesting(self,self.telnetObj,self.serialObj)
-            if stbPowerTestInfo !='':
-                self.ptc_update_msg("updatePowerLevelResult","PASS",stbPowerTestInfo,"")
-            else:
-                self.ptc_update_msg("updatePowerLevelResult","FAIL","","")
-
-    def ptcPerformRfPowerTestCh11(self):
-        if self.powerTestMode == 0 :
-            stbPowerTestInfo = stbPerformChannelPowerTesting(self,self.telnetObj,self.serialObj,1,11)
-            self.powerTestMode = 1
-        else:
-            stbPowerTestInfo = stbPerformChannelPowerTesting(self,self.telnetObj,self.serialObj,0,11)
-
-        if stbPowerTestInfo !='':
-            self.ptc_update_msg("updatePowerLevelResult","PASS",stbPowerTestInfo,"")
-        else:
-            self.ptc_update_msg("updatePowerLevelResult","FAIL","","")
-
-    def ptcPerformRfPowerTestCh15(self):
-        if self.powerTestMode == 0 :
-            stbPowerTestInfo = stbPerformChannelPowerTesting(self,self.telnetObj,self.serialObj,1,15)
-            self.powerTestMode = 1
-        else:
-            stbPowerTestInfo = stbPerformChannelPowerTesting(self,self.telnetObj,self.serialObj,0,15)
-
-        if stbPowerTestInfo !='':
-            self.ptc_update_msg("updatePowerLevelResult","PASS",stbPowerTestInfo,"")
-        else:
-            self.ptc_update_msg("updatePowerLevelResult","FAIL","","")
-
-    def ptcPerformRfPowerTestCh20(self):
-        if self.powerTestMode == 0 :
-            stbPowerTestInfo = stbPerformChannelPowerTesting(self,self.telnetObj,self.serialObj,1,20)
-            self.powerTestMode = 1
-        else:
-            stbPowerTestInfo = stbPerformChannelPowerTesting(self,self.telnetObj,self.serialObj,0,20)
-
-        if stbPowerTestInfo !='':
-            self.ptc_update_msg("updatePowerLevelResult","PASS",stbPowerTestInfo,"")
-        else:
-            self.ptc_update_msg("updatePowerLevelResult","FAIL","","")
-
-
-    def ptcPerformRfPowerTestCh25(self):
-        if self.powerTestMode == 0 :
-            stbPowerTestInfo = stbPerformChannelPowerTesting(self,self.telnetObj,self.serialObj,1,25)
-            self.powerTestMode = 1
-        else:
-            stbPowerTestInfo = stbPerformChannelPowerTesting(self,self.telnetObj,self.serialObj,0,25)
-
-        if stbPowerTestInfo !='':
-            self.ptc_update_msg("updatePowerLevelResult","PASS",stbPowerTestInfo,"")
-        else:
-            self.ptc_update_msg("updatePowerLevelResult","FAIL","","")
 
     def ptcPerformRfTest(self):
 
@@ -139,7 +70,6 @@ class getPTCThread(QThread):
             self.ptc_update_msg("updateSoftwareVersion","PASS",stbSoftwareVer,"")
         else:
             self.ptc_update_msg("updateSoftwareVersion","FAIL",stbSoftwareVer,"")
-
         # Dump UEC Code
         stbDumpInfo = stbDumpUecCode(self,self.telnetObj)
         if stbDumpInfo !='':
@@ -194,7 +124,6 @@ class getPTCThread(QThread):
             self.ptc_update_msg("updateZigBeeResult","FAIL","","")
 
 
-
 class SkedYesUI(QtGui.QMainWindow):
     def __init__(self, parent= None):
         QtGui.QDialog.__init__(self,parent)
@@ -210,6 +139,9 @@ class SkedYesUI(QtGui.QMainWindow):
         buildCommandList()
 
     def initResetDefaultValues(self):
+        ports = list(port_list.comports())
+        for p in ports:
+            print (p)
         self.ui.goldenSampleIfList.addItem("COM1")
         self.ui.goldenSampleIfList.addItem("COM2")
         self.ui.goldenSampleIfList.addItem("COM3")
@@ -283,8 +215,6 @@ class SkedYesUI(QtGui.QMainWindow):
         self.ui.dutZigbeeResult.clear()
         self.ui.zigbeeResult.clear()
         self.ui.zigbeeResult.hide()
-        self.ui.powerTestValue.hide()
-        self.ui.radioButtonCHStop.setChecked(True)
 
     def connectToDut(self):
         print "Connecting to telnet ... "
@@ -297,11 +227,6 @@ class SkedYesUI(QtGui.QMainWindow):
         self.ptcHandlingThread = getPTCThread(self.msgQ,self.telnetObj, self.serialObj, option,value,msg)
         self.connect(self.ptcHandlingThread, SIGNAL("uiUpdateProcess(QString,QString,QString,QString)"),self.uiUpdateProcess)
         self.ui.buttonDutDisconnect.clicked.connect(self.disconnectFromDut)
-        self.ui.radioButtonCHStop.clicked.connect(self.stopPowerLevelTesting)
-        self.ui.radioButtonCH11.clicked.connect(self.powerLevelChangeCh11)
-        self.ui.radioButtonCH15.clicked.connect(self.powerLevelChangeCh15)
-        self.ui.radioButtonCH20.clicked.connect(self.powerLevelChangeCh20)
-        self.ui.radioButtonCH25.clicked.connect(self.powerLevelChangeCh25)
         self.ptcHandlingThread.start()
         self.ptcHandlingThread.startThread()
         self.ui.buttonDutConnect.setEnabled(False)
@@ -309,20 +234,6 @@ class SkedYesUI(QtGui.QMainWindow):
         self.msgQ.put("startRfTest")
         # auto test enabled
         #self.ptcPerformRfTest()
-    def stopPowerLevelTesting(self):
-        self.msgQ.put("stopRfPowerTest")
-
-    def powerLevelChangeCh11(self):
-        self.msgQ.put("startRfPowerTestCh11")
-
-    def powerLevelChangeCh15(self):
-        self.msgQ.put("startRfPowerTestCh15")
-
-    def powerLevelChangeCh20(self):
-        self.msgQ.put("startRfPowerTestCh20")
-
-    def powerLevelChangeCh25(self):
-        self.msgQ.put("startRfPowerTestCh25")
 
     def ptc_update_systemInfo(self):
         stbSoftwareVer = stbGetSoftwareVersion(self, self.telnetObj)
@@ -353,9 +264,6 @@ class SkedYesUI(QtGui.QMainWindow):
             self.updateMocaResult(result,value)
         elif(option == "updateZigBeeResult"):
             self.updateZigBeeResult(result,value)
-        elif(option == "updatePowerLevelResult"):
-            self.updatePowerLevelResult(result,value)
-
 
     def updateGsConnectionStatus(self,text):
         if text == "Connected":
@@ -468,13 +376,7 @@ class SkedYesUI(QtGui.QMainWindow):
             self.ui.mocaResult.setText("FAIL")
         self.ui.mocaResult.show()
 
-    def updatePowerLevelResult(self,result,text):
-        self.ui.powerTestValue.clear()
-        self.ui.powerTestValue.setText(text)
-        self.ui.powerTestValue.show()
-
     def updateZigBeeResult(self,result,text):
-        print " updateZigBeeResult"
         self.ui.dutZigbeeResult.setOverwriteMode(True)
         self.ui.dutZigbeeResult.setPlainText(text)
         self.ui.dutZigbeeResult.setReadOnly(True)
@@ -485,7 +387,6 @@ class SkedYesUI(QtGui.QMainWindow):
             self.ui.zigbeeResult.setStyleSheet(_fromUtf8("QLabel { background-color : red; color : white; }"))
             self.ui.zigbeeResult.setText("FAIL")
         self.ui.zigbeeResult.show()
-        print " updateZigBeeResult End"
 
     def updateSerialNumberInfo(self,result,caId,chipNumber):
         self.ui.caStbIdValueLabel.setStyleSheet(_fromUtf8("QLabel { background-color : white; color : green; }"))
@@ -539,8 +440,32 @@ def stbPerformZigBeeTest(app,tel,ser):
     findstr= "Avg RSSI"
     findstrInit = "PAN"
     findstrChSet = "Channel set to "
+    tel.telWrite('\x03') #ctrl + c
+    time.sleep(.2)
+    tel.telWrite(command_list[TestCommnad.RF_TEST_INIT_COMMAND])
+    time.sleep(2)
+    data = tel.telReadSocket(app)
+    match = re.search(findstrInit,data)
+    print [data]
+    if match:
+        #Init done
+        cmd = command_list[TestCommnad.RF_CH_SEL_CMD] + "20" #channel number
+        tel.telWrite(cmd)
+        time.sleep(1)
+        data = tel.telReadSocket(app)
+        #Channel Set OK
+        tel.telWrite(command_list[TestCommnad.RF_ANT_SEL_CMD])
+        time.sleep(1)
+        data = tel.telReadSocket(app)
+        tel.telWrite(command_list[TestCommnad.DUT_ZIGBEE_PING_TEST_CMD1])
+        time.sleep(1)
+        data = tel.telReadSocket(app)
+        tel.telWrite(command_list[TestCommnad.DUT_ZIGBEE_PING_TEST_CMD2])
+        time.sleep(1)
+        data = tel.telReadSocket(app)
+        print data
 
-    #golden sample setup
+    print "DUT Setup Done "
     print "Golden Sample Setup start "
     #send the Command to Golden Sample
     ser.telWrite('\x03') #ctrl + c
@@ -560,85 +485,43 @@ def stbPerformZigBeeTest(app,tel,ser):
         ser.telWrite(command_list[TestCommnad.RF_ANT_SEL_CMD])
         time.sleep(1)
         data = ser.telReadSocket(app)
-        ser.telWrite(command_list[TestCommnad.GS_ZIGBEE_PING_TEST_CMD1]) # set TX Power
+        ser.telWrite(command_list[TestCommnad.GS_ZIGBEE_PING_TEST_CMD1])
         time.sleep(1)
         data = ser.telReadSocket(app)
-
-    #Setup DUT for Zigbee test
-    print " Setup DUT for Zigbee Test"
-    tel.telWrite('\x03') #ctrl + c
-    time.sleep(.2)
-    tel.telWrite(command_list[TestCommnad.RF_TEST_INIT_COMMAND])
-    time.sleep(2)
-    data = tel.telReadSocket(app)
-    match = re.search(findstrInit,data)
-    print [data]
-    if match:
-        #Init done
-        cmd = command_list[TestCommnad.RF_CH_SEL_CMD] + "20" #channel number
-        tel.telWrite(cmd)
-        time.sleep(1)
-        data = tel.telReadSocket(app)
-        #Channel Set OK
-        tel.telWrite(command_list[TestCommnad.RF_ANT_SEL_CMD])
-        time.sleep(1)
-        data = tel.telReadSocket(app)
-        tel.telWrite(command_list[TestCommnad.DUT_ZIGBEE_PING_TEST_CMD1]) # Reset RX and TX counters
-        time.sleep(1)
-        data = tel.telReadSocket(app)
-
-        print " Start sending 1000 packets every 10 ms"
         ser.telWrite(command_list[TestCommnad.GS_ZIGBEE_PING_TEST_CMD2])
         time.sleep(1)
-        serData = ser.telReadSocket(app)
-        print serData
-
-        tel.telWrite(command_list[TestCommnad.DUT_ZIGBEE_PING_TEST_CMD2]) # Enable Receiver rx 1
-        time.sleep(1)
-        data = tel.telReadSocket(app)
+        data = ser.telReadSocket(app)
         print data
 
-        print "DUT Setup Done "
+    print "going to wait for 10 secs to complete the ZIGBEE test "
 
-        respondFound = 0
-        retrycnt = 0
-        while retrycnt < 15 and respondFound == 0:
-            tel.telWrite(command_list[TestCommnad.DUT_ZIGBEE_PING_TEST_STAT_CMD])
-            time.sleep(5)
-            data = tel.telReadSocket(app)
-            print [data]
-            match = re.search(findstr,data)
-            if match :
-                print "ZigBee PASS "
-                respondFound = 1
-            else :
-                retrycnt +=1
+    time.sleep(10)
+    tel.telWrite(command_list[TestCommnad.DUT_ZIGBEE_PING_TEST_STAT_CMD])
+    time.sleep(3)
+    data = tel.telReadSocket(app)
+    print [data]
 
-    if respondFound :
+    match = re.search(findstr,data)
+    if match :
         print "ZigBee PASS "
     else :
         print "ZigBee FAIL"
 
     tel.telWrite(command_list[TestCommnad.DUT_ZIGBEE_PING_TEST_STOP_CMD])
     time.sleep(1)
-    tel.telWrite('\x03') #ctrl + c
-    time.sleep(1)
+    data1 = tel.telReadSocket(app)
     ser.telWrite('\x03') #ctrl + c
-    time.sleep(1)
-
-    if respondFound:
-        data = re.sub('\W+','', data)
+    time.sleep(.2)
+    tel.telWrite('\x03') #ctrl + c
+    time.sleep(.2)
+    if match:
         return data
     else:
-        print " Return msg 2"
         return ''
 
-def stbPerformChannelPowerTesting(app,tel,ser,initMode,chnum):
+def stbPerformChannelPowerTesting(app,tel,ser,initMode,chnum,chNumUpdate):
     findstrInit = "PAN"
     findCwustr= "Continuous Wave Unmodulated"
-    findAntStr = "Selected Antenna"
-    findWaveDisableStr = "Continuous Wave Disabled"
-    findChSelStr = "Channel set"
 
     if initMode:
         tel.telWrite('\x03') #ctrl + c
@@ -650,88 +533,39 @@ def stbPerformChannelPowerTesting(app,tel,ser,initMode,chnum):
         print [data]
         if match:
             #Init done
-            respondFound = 0
-            retrycnt = 0
-            while retrycnt < 15 and respondFound == 0:
-                tel.telWrite(command_list[TestCommnad.RF_ANT_SEL_CMD])
-                time.sleep(1)
-                data = tel.telReadSocket(app)
-                print [data]
-                match = re.search(findAntStr,data)
-                if match :
-                    respondFound = 1
-                else :
-                    retrycnt +=1
-
-        #Antenna Select OK
-    else:# Disable the Continuous Wave
-        respondFound = 0
-        retrycnt = 0
-        while retrycnt < 15 and respondFound == 0:
-            tel.telWrite(command_list[TestCommnad.DUT_CH_PWR_TEST_STOP_CMD])
+            tel.telWrite(command_list[TestCommnad.RF_ANT_SEL_CMD])
             time.sleep(1)
             data = tel.telReadSocket(app)
-            print [data]
-            match = re.search(findWaveDisableStr,data)
-            if match :
-                respondFound = 1
-            else :
-                retrycnt +=1
+        #Antenna Select OK
+        else:# Disable the Continuous Wave
+            tel.telWrite(command_list[TestCommnad.DUT_CH_PWR_TEST_STAT_CMD2])
+            time.sleep(1)
+            data = tel.telReadSocket(app)
+        print data
 
     # Set teh channel number
-     #channel number
-    respondFound = 0
-    retrycnt = 0
-    while retrycnt < 15 and respondFound == 0:
-        cmd = command_list[TestCommnad.RF_CH_SEL_CMD] +str(chnum)
-        tel.telWrite(cmd)
-        time.sleep(1)
-        data = tel.telReadSocket(app)
-        print [data]
-        match = re.search(findChSelStr,data)
-        if match :
-            respondFound = 1
-        else :
-            retrycnt +=1
-
+    cmd = command_list[TestCommnad.RF_CH_SEL_CMD] + chnum #channel number
+    tel.telWrite(cmd)
+    time.sleep(1)
+    data = tel.telReadSocket(app)
     #Channel Set OK
 
-    respondFound = 0
-    retrycnt = 0
-    while retrycnt < 15 and respondFound == 0:
-        #Enable the Continuous Unmodulated wave
-        tel.telWrite(command_list[TestCommnad.DUT_CH_PWR_TEST_STAT_CMD1])
-        time.sleep(1)
-        data = tel.telReadSocket(app)
+    #Enable the Continuous Unmodulated wave
+    tel.telWrite(command_list[TestCommnad.DUT_CH_PWR_TEST_STAT_CMD1])
+    time.sleep(1)
+    data = tel.telReadSocket(app)
+    match = re.search(findCwustr,data)
+    if match:
         print [data]
-        match = re.search(findCwustr,data)
-        if match :
-            respondFound = 1
-        else :
-            retrycnt +=1
-
-    return re.sub('\W+','', data)
 
 def stbStopChannelPowerTesting(app,tel,ser):
-    findWaveDisableStr = "Continuous Wave Disabled"
     # Disable the Continuous Wave
-    respondFound = 0
-    retrycnt = 0
-    while retrycnt < 15 and respondFound == 0:
-        tel.telWrite(command_list[TestCommnad.DUT_CH_PWR_TEST_STOP_CMD])
-        time.sleep(1)
-        data = tel.telReadSocket(app)
-        print [data]
-        match = re.search(findWaveDisableStr,data)
-        if match :
-            respondFound = 1
-        else :
-            retrycnt +=1
-
+    tel.telWrite(command_list[TestCommnad.DUT_CH_PWR_TEST_STAT_CMD2])
+    time.sleep(1)
+    data = tel.telReadSocket(app)
+    print data
     tel.telWrite('\x03') #ctrl + c
     time.sleep(1)
-
-    return re.sub('\W+','', data)
 
 def stbPrepareGsRfTest(app,ser):
 
