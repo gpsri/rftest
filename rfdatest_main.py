@@ -140,7 +140,7 @@ class getPTCThread(QThread):
             self.ptc_update_msg("updateSoftwareVersion","PASS",stbSoftwareVer,"")
         else:
             self.ptc_update_msg("updateSoftwareVersion","FAIL",stbSoftwareVer,"")
-
+        '''
         # Dump UEC Code
         stbDumpInfo = stbDumpUecCode(self,self.telnetObj)
         if stbDumpInfo !='':
@@ -195,7 +195,7 @@ class getPTCThread(QThread):
             self.ptc_update_msg("updateMocaResult","PASS",stbMocaTestInfo,"")
         else:
             self.ptc_update_msg("updateMocaResult","FAIL","","")
-
+        '''
         stbZigBeeTestInfo = stbPerformZigBeeTest(self,self.telnetObj,self.serialObj)
 
         if stbZigBeeTestInfo !='':
@@ -272,7 +272,7 @@ class SkedYesUI(QtGui.QMainWindow):
         print str(self.serialObj)
         print "connectToGsStb : Connected "
         self.updateGsConnectionStatus("Connected")
-        #stbPrepareGsRfTest(self,self.serialObj)
+        stbPrepareGsRfTest(self,self.serialObj)
 
     def clearTestResults(self):
         self.ui.caChipNumValueLabel.clear()
@@ -555,8 +555,115 @@ def stbPerformMocaTest(app,tel,ser):
         print "MOCA FAIL"
         return ''
 
+def stbPerformZigBeeTest(app,tel,ser):
+    findstr= "Avg RSSI"
+    findstrInit = "PAN"
+    findstrChSet = "Channel set to "
+    respondFound = 0
+    # Type the following commands in DUT
+    #GP510GP510_transceiver 2
+    # ch 20
+    # an 0
+    # R
+    # rx 1
+
+    #Setup DUT for Zigbee test
+    print " Setup DUT for Zigbee Test"
+    tel.telWrite('\x03') #ctrl + c
+    time.sleep(.2)
+    tel.telWrite("GP510_transceiver 2")
+    time.sleep(2)
+    data = tel.telReadSocket(app)
+    match = re.search(findstrInit,data)
+    if match:
+        #Init done
+        tel.telWrite("ch 20")
+        time.sleep(1)
+        data = tel.telReadSocket(app)
+        #Channel Set OK
+        tel.telWrite("an 0")
+        time.sleep(1)
+        data = tel.telReadSocket(app)
+        tel.telWrite("R") # Reset RX and TX counters
+        time.sleep(1)
+        data = tel.telReadSocket(app)
+
+        tel.telWrite("rx 1") # Enable Receiver rx 1
+        time.sleep(1)
+        data = tel.telReadSocket(app)
+        print data
 
 
+    #golden sample setup
+    print "Golden Sample Setup start "
+    #send the Command to Golden Sample
+    ser.serWrite('\x03') #ctrl + c
+    time.sleep(1)
+    ser.serWrite("GP510_transceiver 2")
+    time.sleep(2)
+    data = ser.serRead(app)
+    match = re.search(findstrInit,data)
+    if match:
+        #Init done
+        ser.serWrite("ch 20")
+        time.sleep(1)
+        data = ser.serRead(app)
+        #Channel Set OK
+        ser.serWrite("an 0")
+        time.sleep(1)
+        data = ser.serRead(app)
+        ser.serWrite("w 3") # set TX Power
+        time.sleep(1)
+        data = ser.serRead(app)
+        print " Start sending 1000 packets every 10 ms"
+        ser.serWrite("tx 1000 10")
+        time.sleep(1)
+        serData = ser.serRead(app)
+        print serData
+
+        print "DUT Setup Done "
+
+        respondFound = 0
+        retrycnt = 0
+        while retrycnt < 15 and respondFound == 0:
+            tel.telWrite("P")
+            time.sleep(5)
+            data = tel.telReadSocket(app)
+            match = re.search(findstr,data)
+            if match :
+                print "ZigBee PASS "
+                respondFound = 1
+            else :
+                retrycnt +=1
+
+    if respondFound :
+        print "ZigBee PASS "
+    else :
+        print "ZigBee FAIL"
+
+    tel.telWrite("rx 0")
+    time.sleep(1)
+    tel.telWrite('\x03') #ctrl + c
+    time.sleep(1)
+    ser.serWrite('\x03') #ctrl + c
+    time.sleep(1)
+    value = data.split('\n')
+    for i in value:
+        print [i]
+
+    if respondFound:
+        # Expected response:
+        #RX 1000 - Check this line
+        #TX OK 0
+        #TX Fail 0
+        strRX = str(value[1])
+        strRSSI = str (value[4])
+        retValue = strRX + strRSSI
+        return retValue
+    else:
+        print " Return msg 2"
+        return ''
+'''
 def stbPerformZigBeeTest(app,tel,ser):
     findstr= "Avg RSSI"
     findstrInit = "PAN"
@@ -663,7 +770,7 @@ def stbPerformZigBeeTest(app,tel,ser):
     else:
         print " Return msg 2"
         return ''
-
+'''
 def stbPerformChannelPowerTesting(app,tel,ser,initMode,chnum):
     findstrInit = "PAN"
     findCwustr= "Continuous Wave Unmodulated"
