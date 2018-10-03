@@ -122,11 +122,11 @@ def buildCommandList():
 #password = getpass.getpass()
 class SkedTelnet():
     def __init__(self):
-        print "init"
+        print ("init")
         tn = telnetlib.Telnet(HOST)
         tn.read_until("login: ")
         tn.write("root" + "\r\n")
-        print "login enter"
+        print ("login enter")
         #tn.read_until("Password: ")
         #tn.write("606202123" + "\n")
         #tn.write("whoami" +"\n")
@@ -142,16 +142,16 @@ class SkedTelnet():
     def telReadSocket(self,app):
         try:
             s= self.tn.get_socket()
-            print s
+            print (s)
             while 1:
                 QtCore.QCoreApplication.processEvents()
                 time.sleep(.5)
                 data = s.recv(4096)
                 if not data :
-                    print 'No data from Telnet Server'
+                    print ('No data from Telnet Server')
                 else :
                     #print data
-                    print "SS"
+                    print ("SS")
                     sys.stdout.write(data)
                     #user entered a message
                     if data:
@@ -159,7 +159,7 @@ class SkedTelnet():
                     else:
                         return ''
         except:
-            print "There is not connection "
+            print ("There is not connection ")
 
     def telread(self,string):
         return self.tn.read_until(string)
@@ -183,7 +183,7 @@ class SkedSerial():
                 rtscts = True,
                 )
         else:
-            print "open for windows "
+            print ("open for windows ")
             ser = serial.Serial(
                 port=comport,
                 baudrate=115200,
@@ -193,7 +193,7 @@ class SkedSerial():
                 )
 
         if(ser.isOpen()):
-            print "init OK "
+            print ("init OK ")
         ser.close()
         time.sleep(1)
         ser.open()
@@ -205,14 +205,11 @@ class SkedSerial():
 
         #self.serial.reset_output_buffer()
         try:
-            print [string]
+            print ([string])
             if string == '\x03':
-                print "1"
                 size = self.serial.write('\x03')
             else:
-                print "2"
                 size = self.serial.write(string + "\r\n")
-            print "3"
         except:
             time.sleep(1)
 
@@ -229,4 +226,4 @@ class SkedSerial():
             else:
                 return ''
         except:
-            print "There is no connection "
+            print ("There is no connection ")
