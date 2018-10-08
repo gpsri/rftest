@@ -146,7 +146,7 @@ class getPTCThread(QThread):
             self.ptc_update_msg("updateSoftwareVersion","PASS",stbSoftwareVer,"")
         else:
             self.ptc_update_msg("updateSoftwareVersion","FAIL",stbSoftwareVer,"")
-        '''
+
         # Dump UEC Code
         stbDumpInfo = stbDumpUecCode(self,self.telnetObj)
         if stbDumpInfo !='':
@@ -201,7 +201,7 @@ class getPTCThread(QThread):
             self.ptc_update_msg("updateMocaResult","PASS",stbMocaTestInfo,"")
         else:
             self.ptc_update_msg("updateMocaResult","FAIL","","")
-        '''
+
         stbZigBeeTestInfo = stbPerformZigBeeTest(self,self.telnetObj,self.serialObj)
 
         if stbZigBeeTestInfo !='':
@@ -279,7 +279,10 @@ class SkedYesUI(QtGui.QMainWindow):
         print (str(self.serialObj))
         print ("connectToGsStb : Connected ")
         self.updateGsConnectionStatus("Connected")
-        stbPrepareGsRfTest(self,self.serialObj)
+        res = stbPrepareGsRfTest(self,self.serialObj)
+        if res != 0:
+            print ("Serial Connection Failed please check the serial port connection")
+
 
     def clearTestResults(self):
         self.ui.caChipNumValueLabel.clear()
@@ -567,6 +570,9 @@ def stbPerformZigBeeTest(app,tel,ser):
     findstrInit = "PAN"
     findstrChSet = "Channel set to "
     findstrAnSet = "Selected Antenna"
+    findstrTxPwrSet = "Set TX Power to"
+    findstrTxTransmission = "Start Transmission"
+
 
     respondFound = 0
     # Type the following commands in DUT
@@ -613,22 +619,125 @@ def stbPerformZigBeeTest(app,tel,ser):
     data = ser.serRead(app)
     match = re.search(findstrInit,data)
     if match:
+        print ("GS: GP510_transceiver data Found ")
+        respondFound = 1
+        retrycnt = 0
+    else:
+        respondFound = 0
+        retrycnt = 0
+        while retrycnt < 15 and respondFound == 0:
+            time.sleep(1)
+            data = ser.serRead(app)
+            match = re.search(findstrInit,data)
+            if match :
+                print ("GS: GP510_transceiver data Found ")
+                respondFound = 1
+            else :
+                print ("GS: Not Found Retry")
+                retrycnt +=1
+
+    if respondFound:
+        print("GS Init Done Start sending commands")
         #Init done
         ser.serWrite("ch 20")
         time.sleep(1)
+        ser.serWrite("\r\n")
         data = ser.serRead(app)
+        print("GS Ch Set ")
+        print ([data])
+        match = re.search(findstrChSet,data)
+        if match:
+            print ("GS: Channel set Found ")
+            respondFound = 1
+            retrycnt = 0
+        else:
+            respondFound = 0
+            retrycnt = 0
+            while retrycnt < 15 and respondFound == 0:
+                time.sleep(1)
+                data = ser.serRead(app)
+                match = re.search(findstrChSet,data)
+                if match :
+                    print ("GS: Channel set Found ")
+                    respondFound = 1
+                else :
+                    print ("GS: Channel set Not Found Retry")
+                    retrycnt +=1
+
         #Channel Set OK
         ser.serWrite("an 0")
         time.sleep(1)
+        ser.serWrite("\r\n")
         data = ser.serRead(app)
+        print("GS Ant Set ")
+        print ([data])
+        match = re.search(findstrAnSet,data)
+        if match:
+            print ("GS: Antenna set Found ")
+            respondFound = 1
+            retrycnt = 0
+        else:
+            respondFound = 0
+            retrycnt = 0
+            while retrycnt < 15 and respondFound == 0:
+                time.sleep(1)
+                data = ser.serRead(app)
+                match = re.search(findstrAnSet,data)
+                if match :
+                    print ("GS: Antenna set Found ")
+                    respondFound = 1
+                else :
+                    print ("GS: Antenna set Not Found Retry")
+                    retrycnt +=1
+
         ser.serWrite("w 3") # set TX Power
         time.sleep(1)
+        ser.serWrite("\r\n")
         data = ser.serRead(app)
+        match = re.search(findstrTxPwrSet,data)
+        if match:
+            print ("GS: Tx power set Found ")
+            respondFound = 1
+            retrycnt = 0
+        else:
+            respondFound = 0
+            retrycnt = 0
+            while retrycnt < 15 and respondFound == 0:
+                time.sleep(1)
+                data = ser.serRead(app)
+                match = re.search(findstrTxPwrSet,data)
+                if match :
+                    print ("GS: Tx power set Found ")
+                    respondFound = 1
+                else :
+                    print ("GS: Tx Power set Not Found Retry")
+                    retrycnt +=1
+
+        print("GS TX Power Set ")
+        print ([data])
         print (" Start sending 1000 packets every 10 ms")
         ser.serWrite("tx 1000 10")
         time.sleep(1)
-        serData = ser.serRead(app)
-        print (serData)
+        ser.serWrite("\r\n")
+        data = ser.serRead(app)
+        match = re.search(findstrTxTransmission,data)
+        if match:
+            print ("GS:Tx transmission Found ")
+            respondFound = 1
+            retrycnt = 0
+        else:
+            respondFound = 0
+            retrycnt = 0
+            while retrycnt < 15 and respondFound == 0:
+                time.sleep(1)
+                data = ser.serRead(app)
+                match = re.search(findstrTxTransmission,data)
+                if match :
+                    print ("GS: Tx transmission set Found ")
+                    respondFound = 1
+                else :
+                    print ("GS: Tx transmission set Not Found Retry")
+                    retrycnt +=1
 
         print ("DUT Setup Done ")
 
@@ -652,6 +761,7 @@ def stbPerformZigBeeTest(app,tel,ser):
 
     tel.telWrite("rx 0")
     time.sleep(1)
+    ser.serWrite("\r\n")
     tel.telWrite('\x03') #ctrl + c
     time.sleep(1)
     ser.serWrite('\x03') #ctrl + c
@@ -884,21 +994,30 @@ def stbPrepareGsRfTest(app,ser):
 
     # Write MAC Address
     statusStr = "Write MAC successfully"
-
     ser.serWrite('\x03') #ctrl + c
     time.sleep(1)
     write_cmd = command_list[TestCommnad.WRITE_MAC] +" "+"001222FFFF30"
     ser.serWrite(write_cmd)
     time.sleep(1)
-    print (time.time())
-    waitforfind = 1
-    while waitforfind:
-        data = ser.serRead(app)
-        match = re.search(statusStr,data)
-        if match :
-            waitforfind = 0
+    data = ser.serRead(app)
+    match = re.search(statusStr,data)
+    if match :
+        waitforfind = 0
+        print (data)
+    else:
+        waitforfind = 1
+        while waitforfind or retryCnt < 10:
+            data = ser.serRead(app)
             print (data)
+            match = re.search(statusStr,data)
+            if match :
+                waitforfind = 0
+                print (data)
+            else:
+                retryCnt +=retryCnt
 
+    if waitforfind != 0 :
+        return 1;
     #Config the network
     write_cmd = "ifconfig eth0 192.192.192.1"
     ser.serWrite(write_cmd)
@@ -929,6 +1048,7 @@ def stbPrepareGsRfTest(app,ser):
     data = ser.serRead(app)
     print (data)
 
+    return 0;
 
 def stbProgramMacAddress( app, tel) :
     statusStr = "Write MAC successfully"
@@ -1201,7 +1321,7 @@ except AttributeError:
 if __name__ == "__main__":
     app = QtGui.QApplication(sys.argv)
     myapp = SkedYesUI()
-    myapp.setWindowTitle(_translate("RFTEST", "SKED YES V1.05", None))
+    myapp.setWindowTitle(_translate("RFTEST", "SKED YES V1.06", None))
     myapp.show()
     QtCore.QObject.connect(app, QtCore.SIGNAL(_fromUtf8("lastWindowClosed()")),forceCloseApp)
     signal.signal(signal.SIGINT, signal.SIG_DFL)
