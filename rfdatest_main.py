@@ -1006,15 +1006,19 @@ def stbPrepareGsRfTest(app,ser):
         print (data)
     else:
         waitforfind = 1
-        while waitforfind or retryCnt < 10:
+        retryCnt = 0
+        while waitforfind and retryCnt < 10:
             data = ser.serRead(app)
             print (data)
+            time.sleep(2)
             match = re.search(statusStr,data)
             if match :
                 waitforfind = 0
                 print (data)
             else:
-                retryCnt +=retryCnt
+                print ("Read Fail Retry ")
+                print (retryCnt)
+                retryCnt +=1
 
     if waitforfind != 0 :
         return 1;
