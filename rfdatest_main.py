@@ -11,6 +11,7 @@ import serial.tools.list_ports as port_list
 #from sklearn import tree
 import re
 import signal
+from shutil import copyfile
 
 is_py2 = sys.version[0] == '2'
 if is_py2:
@@ -43,6 +44,7 @@ class getPTCThread(QThread):
         self.telnetObj = telnetObj
         self.serialObj = serialObj
         self.powerTestMode = 0
+        self.reportFile = 0
 
     def __del__(self):
         self.wait()
@@ -66,6 +68,13 @@ class getPTCThread(QThread):
                 self.ptcPerformRfPowerTestCh20()
             elif(msg == "startRfPowerTestCh25"):
                 self.ptcPerformRfPowerTestCh25()
+            elif(msg == "closeReportFile"):
+                print("closeReportFileCalled")
+                print(self.reportFile)
+                srcFile =str(self.reportFile.name);
+                print (srcFile);
+                self.reportFile.close()
+                copyfile(srcFile, "Outbuffer_tmp.txt")
 
             self.sleep(1)
             self.msgQ.task_done()
@@ -139,27 +148,42 @@ class getPTCThread(QThread):
         if stbSnInfo !='':
             #self.updateSerialNumberInfo(stbSnInfo[0],stbSnInfo[1])
             self.ptc_update_msg("updateSerialNumberInfo","PASS",stbSnInfo[0],stbSnInfo[1])
-
+            filename = str(stbSnInfo[0]+".txt")
+            self.reportFile = open(filename,'w')
+            if(self.reportFile == 0):
+                print("ERROR FILE OPEN")
+            else:
+                print("Report FIle Created ")
+                print(self.reportFile)
+                self.reportFile.write(str("CASSTBID="+stbSnInfo[0])+'\n')
+                self.reportFile.write(str("CHIPNUM="+stbSnInfo[1])+'\n')
+    
         #Get the Software Version
         stbSoftwareVer = stbGetSoftwareVersion(self, self.telnetObj)
         if stbSoftwareVer !='':
             self.ptc_update_msg("updateSoftwareVersion","PASS",stbSoftwareVer,"")
+            self.reportFile.write(str("MSTCHTPVERSION="+stbSoftwareVer)+'\n')
         else:
             self.ptc_update_msg("updateSoftwareVersion","FAIL",stbSoftwareVer,"")
+            self.reportFile.write(str("MSTCHTPVERSION=0")+'\n')
 
         # Dump UEC Code
         stbDumpInfo = stbDumpUecCode(self,self.telnetObj)
         if stbDumpInfo !='':
             self.ptc_update_msg("updateUecCodeDump","PASS",stbDumpInfo,"")
+            self.reportFile.write(str("UECCODEMD5="+stbDumpInfo)+'\n')
         else:
             self.ptc_update_msg("updateUecCodeDump","FAIL","","")
+            self.reportFile.write(str("UECCODEMD5=0")+'\n')
 
         # Usb Test
         stbUsbInfo = stbPerformUsbTest(self,self.telnetObj)
         if stbUsbInfo !='':
             self.ptc_update_msg("updateUsbTestResult","PASS",stbUsbInfo,"")
+            self.reportFile.write(str("USB=1")+'\n')
         else:
             self.ptc_update_msg("updateUsbTestResult","FAIL","","")
+            self.reportFile.write(str("USB=0")+'\n')
 
         #Fan test
         stbFanInfo = stbPerformFanTest(self,self.telnetObj)
@@ -170,25 +194,31 @@ class getPTCThread(QThread):
             if speedValue < 2150 or speedValue > 4150:
                 resultValue = 0
                 self.ptc_update_msg("updateFanTestResult","FAIL",stbFanInfo,"")
+                self.reportFile.write(str("FAN=0")+'\n')
             else:
                 resultValue = 1
                 self.ptc_update_msg("updateFanTestResult","PASS",stbFanInfo,"")
+                self.reportFile.write(str("FAN=1")+'\n')
         else:
             self.ptc_update_msg("updateFanTestResult","FAIL","","")
-
+            self.reportFile.write(str("FAN=0")+'\n')
         #Sata test
         stbHddInfo = stbPerformHddTest(self,self.telnetObj)
         if stbHddInfo !='':
             self.ptc_update_msg("updateHddTestResult","PASS",stbHddInfo,"")
+            self.reportFile.write(str("HDD=1")+'\n')
         else:
             self.ptc_update_msg("updateHddTestResult","FAIL","","")
+            self.reportFile.write(str("HDD=0")+'\n')
 
         #Hdmi_output test
         stbHdmiOutInfo = stbPerformHdmiTest(self, self.telnetObj)
         if stbHdmiOutInfo !='':
             self.ptc_update_msg("updateHdmiOuputTestResult","PASS",stbHdmiOutInfo,"")
+            self.reportFile.write(str("HDMI=1")+'\n')
         else:
             self.ptc_update_msg("updateHdmiOuputTestResult","FAIL","","")
+            self.reportFile.write(str("HDMI=0")+'\n')
 
         stbProgramMacAdd = stbProgramMacAddress(self, self.telnetObj)
         if stbProgramMacAdd !='':
@@ -199,11 +229,12 @@ class getPTCThread(QThread):
         stbMocaTestInfo = stbPerformMocaTest(self,self.telnetObj,self.serialObj)
         if stbMocaTestInfo !='':
             self.ptc_update_msg("updateMocaResult","PASS",stbMocaTestInfo,"")
+            self.reportFile.write(str("MOCA=1")+'\n')
         else:
             self.ptc_update_msg("updateMocaResult","FAIL","","")
+            self.reportFile.write(str("MOCA=0")+'\n')
 
         stbZigBeeTestInfo = stbPerformZigBeeTest(self,self.telnetObj,self.serialObj)
-
         if stbZigBeeTestInfo !='':
             resultList = re.findall(r'\d+', stbZigBeeTestInfo)
             rxVal = int(resultList[0])
@@ -215,10 +246,13 @@ class getPTCThread(QThread):
             stbZigBeeTestInfo = "RX ="+str(rxVal)+ ":" + "Avg RSSI:"+ str(avgRSSI) + " Avg LQI:" + str(avgLQI)
             if rxVal == 0 and avgLQI == 0:
                 self.ptc_update_msg("updateZigBeeResult","FAIL",stbZigBeeTestInfo,"")
+                self.reportFile.write(str("ZIGBEE=0")+'\n')
             else:
                 self.ptc_update_msg("updateZigBeeResult","PASS",stbZigBeeTestInfo,"")
+                self.reportFile.write(str("ZIGBEE=1")+'\n')
         else:
             self.ptc_update_msg("updateZigBeeResult","FAIL","","")
+            self.reportFile.write(str("ZIGBEE=0")+'\n')
 
 
 class SkedYesUI(QtGui.QMainWindow):
@@ -233,6 +267,7 @@ class SkedYesUI(QtGui.QMainWindow):
         self.ui.buttonDutConnect.clicked.connect(self.connectToDut)
         self.ui.buttonDutDisconnect.clicked.connect(self.disconnectFromDut)
         self.msgQ = queue.Queue()
+        self.serialObj = 0;
         #self.msgQ = Queue()
         buildCommandList()
 
@@ -249,11 +284,13 @@ class SkedYesUI(QtGui.QMainWindow):
         self.telnetObj.telWrite('\x03') #ctrl + c
         time.sleep(1)
         self.telnetObj.telWrite("exit") #Exit
+        self.msgQ.put("closeReportFile")
         self.ptcHandlingThread.stopThread()
         self.ui.buttonDutConnect.setEnabled(True)
         self.ui.buttonDutDisconnect.setEnabled(False)
         self.updateDutConnectionStatus(" Not Connected ")
         self.clearTestResults()
+
 
     def connectToGsStb(self):
         print ("Connecting to COM Port  ... ")
@@ -326,6 +363,11 @@ class SkedYesUI(QtGui.QMainWindow):
         option = ""
         value = ""
         msg = ""
+        if (self.serialObj):
+            print("Serial Already open")
+        else:
+            self.serialObj =1
+
         self.ptcHandlingThread = getPTCThread(self.msgQ,self.telnetObj, self.serialObj, option,value,msg)
         self.connect(self.ptcHandlingThread, SIGNAL("uiUpdateProcess(QString,QString,QString,QString)"),self.uiUpdateProcess)
         self.ui.buttonDutDisconnect.clicked.connect(self.disconnectFromDut)
@@ -611,6 +653,13 @@ def stbPerformZigBeeTest(app,tel,ser):
 
     #golden sample setup
     print ("Golden Sample Setup start ")
+    try:
+        ser.serWrite('\x03') #ctrl + c
+    except:
+        time.sleep(1)
+        print (" Return msg 2")
+        return ''
+
     #send the Command to Golden Sample
     ser.serWrite('\x03') #ctrl + c
     time.sleep(1)
@@ -1079,9 +1128,14 @@ def stbGetSoftwareVersion( app, tel) :
     tel.telWrite(command_list[TestCommnad.GET_VER])
     time.sleep(1)
     data = tel.telReadSocket(app)
-    print (data)
+    print ([data])
     swver = data[(data.find("stb")):]
+    print ([swver])
     swver =  swver.translate(None,'#')
+    swver = swver[:-3]
+    #swver = re.sub('\W+','', swver)
+    #
+    print ([swver])
     return swver
 
 def stbDumpUecCode(app,tel) :
@@ -1109,7 +1163,13 @@ def stbDumpUecCode(app,tel) :
         match = re.search(dumpMd5SumString,data1)
         if match :
             waitforfind = 0
-            print (data1)
+            print ([data1])
+            data1 = re.sub('/tmp/UECN1_nopad_dump','', data1)
+            print ([data1])
+            data1 = re.sub('\W+','', data1)
+            print ([data1])
+            data1 = re.sub('md5sumtmpUECN1','', data1)
+            print ([data1])
             return data1
         else:
             continue
