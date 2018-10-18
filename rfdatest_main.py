@@ -157,7 +157,7 @@ class getPTCThread(QThread):
                 print(self.reportFile)
                 self.reportFile.write(str("CASSTBID="+stbSnInfo[0])+'\n')
                 self.reportFile.write(str("CHIPNUM="+stbSnInfo[1])+'\n')
-    
+
         #Get the Software Version
         stbSoftwareVer = stbGetSoftwareVersion(self, self.telnetObj)
         if stbSoftwareVer !='':
@@ -614,6 +614,7 @@ def stbPerformZigBeeTest(app,tel,ser):
     findstrAnSet = "Selected Antenna"
     findstrTxPwrSet = "Set TX Power to"
     findstrTxTransmission = "Start Transmission"
+    findstrTxTransmissionDone = "Packets sent successfully"
 
 
     respondFound = 0
@@ -789,6 +790,26 @@ def stbPerformZigBeeTest(app,tel,ser):
                     retrycnt +=1
 
         print ("DUT Setup Done ")
+
+        data = ser.serRead(app)
+        match = re.search(findstrTxTransmissionDone,data)
+        if match:
+            print ("GS:Tx transmission Found ")
+            respondFound = 1
+            retrycnt = 0
+        else:
+            respondFound = 0
+            retrycnt = 0
+            while retrycnt < 15 and respondFound == 0:
+                time.sleep(1)
+                data = ser.serRead(app)
+                match = re.search(findstrTxTransmissionDone,data)
+                if match :
+                    print ("GS: Tx transmission set Found ")
+                    respondFound = 1
+                else :
+                    print ("GS: Tx transmission set Not Found Retry")
+                    retrycnt +=1
 
         respondFound = 0
         retrycnt = 0
