@@ -101,9 +101,14 @@ class getPTCThread(QThread):
             stbPowerTestInfo = stbPerformChannelPowerTesting(self,self.telnetObj,self.serialObj,0,11)
 
         if stbPowerTestInfo !='':
-            self.ptc_update_msg("updatePowerLevelResult","PASS",stbPowerTestInfo,"")
+            power_start = stbPowerTestInfo.find("power")
+            power_end = stbPowerTestInfo.find("Mhz")
+            level_end = stbPowerTestInfo.find("dBm")
+            self.ptc_update_msg("updatePowerLevelResult","PASS",stbPowerTestInfo[power_start:power_end]+"Mhz" + stbPowerTestInfo[power_end+3:level_end] + "dBm","")
+            self.reportFile.write(str("PWRCH11=")+stbPowerTestInfo[power_start:power_end]+"Mhz" + stbPowerTestInfo[power_end+3:level_end] + "dBm"'\n')
         else:
             self.ptc_update_msg("updatePowerLevelResult","FAIL","","")
+            self.reportFile.write(str("PWRCH11=")+"0 FAIL"'\n')
 
     def ptcPerformRfPowerTestCh15(self):
         if self.powerTestMode == 0 :
@@ -113,9 +118,14 @@ class getPTCThread(QThread):
             stbPowerTestInfo = stbPerformChannelPowerTesting(self,self.telnetObj,self.serialObj,0,15)
 
         if stbPowerTestInfo !='':
-            self.ptc_update_msg("updatePowerLevelResult","PASS",stbPowerTestInfo,"")
+            power_start = stbPowerTestInfo.find("power")
+            power_end = stbPowerTestInfo.find("Mhz")
+            level_end = stbPowerTestInfo.find("dBm")
+            self.ptc_update_msg("updatePowerLevelResult","PASS",stbPowerTestInfo[power_start:power_end]+"Mhz" + stbPowerTestInfo[power_end+3:level_end] + "dBm","")
+            self.reportFile.write(str("PWRCH15=")+stbPowerTestInfo[power_start:power_end]+"Mhz" + stbPowerTestInfo[power_end+3:level_end] + "dBm"'\n')
         else:
             self.ptc_update_msg("updatePowerLevelResult","FAIL","","")
+            self.reportFile.write(str("PWRCH15=")+"0 FAIL"'\n')
 
     def ptcPerformRfPowerTestCh20(self):
         if self.powerTestMode == 0 :
@@ -125,9 +135,14 @@ class getPTCThread(QThread):
             stbPowerTestInfo = stbPerformChannelPowerTesting(self,self.telnetObj,self.serialObj,0,20)
 
         if stbPowerTestInfo !='':
-            self.ptc_update_msg("updatePowerLevelResult","PASS",stbPowerTestInfo,"")
+            power_start = stbPowerTestInfo.find("power")
+            power_end = stbPowerTestInfo.find("Mhz")
+            level_end = stbPowerTestInfo.find("dBm")
+            self.ptc_update_msg("updatePowerLevelResult","PASS",stbPowerTestInfo[power_start:power_end]+"Mhz" + stbPowerTestInfo[power_end+3:level_end] + "dBm","")
+            self.reportFile.write(str("PWRCH20=")+stbPowerTestInfo[power_start:power_end]+"Mhz" + stbPowerTestInfo[power_end+3:level_end] + "dBm"'\n')
         else:
             self.ptc_update_msg("updatePowerLevelResult","FAIL","","")
+            self.reportFile.write(str("PWRCH20=")+"0 FAIL"'\n')
 
 
     def ptcPerformRfPowerTestCh25(self):
@@ -138,9 +153,14 @@ class getPTCThread(QThread):
             stbPowerTestInfo = stbPerformChannelPowerTesting(self,self.telnetObj,self.serialObj,0,25)
 
         if stbPowerTestInfo !='':
-            self.ptc_update_msg("updatePowerLevelResult","PASS",stbPowerTestInfo,"")
+            power_start = stbPowerTestInfo.find("power")
+            power_end = stbPowerTestInfo.find("Mhz")
+            level_end = stbPowerTestInfo.find("dBm")
+            self.ptc_update_msg("updatePowerLevelResult","PASS",stbPowerTestInfo[power_start:power_end]+"Mhz" + stbPowerTestInfo[power_end+3:level_end] + "dBm","")
+            self.reportFile.write(str("PWRCH25=")+stbPowerTestInfo[power_start:power_end]+"Mhz" + stbPowerTestInfo[power_end+3:level_end] + "dBm"'\n')
         else:
             self.ptc_update_msg("updatePowerLevelResult","FAIL","","")
+            self.reportFile.write(str("PWRCH25=")+"0 FAIL"'\n')
 
     def ptcPerformRfTest(self):
 
@@ -1037,7 +1057,26 @@ def stbPerformChannelPowerTesting(app,tel,ser,initMode,chnum):
         else :
             retrycnt +=1
 
-    return re.sub('\W+','', data)
+    data = re.sub('\W+','', data)
+    if data == '':
+        return data
+
+    path = "Release\SignalHoundSKT.exe ch" + str(chnum)
+    print "Run  SignalHoundSKT:", path
+    result = os.system(path)
+    if result == 1:
+        print("File open failed")
+        ui.updateTelEditor("File open failed !")
+        return
+    path = "powerLevel.txt"
+    fp = open(path, "r")
+    line = ""
+    line = fp.readline()
+    if line == "\n":
+        line = fp.readline()
+
+    fp.close()
+    return re.sub('\s+', '', line)
 
 def stbStopChannelPowerTesting(app,tel,ser):
     findWaveDisableStr = "Continuous Wave Disabled"
@@ -1406,7 +1445,7 @@ except AttributeError:
 if __name__ == "__main__":
     app = QtGui.QApplication(sys.argv)
     myapp = SkedYesUI()
-    myapp.setWindowTitle(_translate("RFTEST", "SKED YES V1.06", None))
+    myapp.setWindowTitle(_translate("RFTEST", "SKED YES V1.07", None))
     myapp.show()
     QtCore.QObject.connect(app, QtCore.SIGNAL(_fromUtf8("lastWindowClosed()")),forceCloseApp)
     signal.signal(signal.SIGINT, signal.SIG_DFL)
