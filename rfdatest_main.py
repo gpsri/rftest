@@ -10,6 +10,7 @@ import xml.etree.ElementTree as ET
 import serial.tools.list_ports as port_list
 #from sklearn import tree
 import re
+import os
 import signal
 from shutil import copyfile
 
@@ -24,6 +25,7 @@ else:
 exitFlag = 0
 hddtestCnt =0
 hddtestFlag = 0
+resultFlag = True
 
 try:
     _encoding = QtGui.QApplication.UnicodeUTF8
@@ -44,7 +46,8 @@ class getPTCThread(QThread):
         self.telnetObj = telnetObj
         self.serialObj = serialObj
         self.powerTestMode = 0
-        self.reportFile = 0
+        self.reportFile = open("temp_", 'w')
+        self.stbSN = ""
 
     def __del__(self):
         self.wait()
@@ -70,12 +73,13 @@ class getPTCThread(QThread):
                 self.ptcPerformRfPowerTestCh25()
             elif(msg == "closeReportFile"):
                 print("closeReportFileCalled")
-                print(self.reportFile)
                 srcFile =str(self.reportFile.name);
                 print (srcFile);
                 self.reportFile.close()
-                copyfile(srcFile, "Outbuffer_tmp.txt")
-
+                #copyfile(srcFile, "Outbuffer_tmp.txt")
+                if os.path.exists(srcFile) == True and self.stbSN != '':
+                    copyfile(srcFile, self.stbSN + ".txt")
+                    os.remove(srcFile)
             self.sleep(1)
             self.msgQ.task_done()
 
@@ -104,11 +108,12 @@ class getPTCThread(QThread):
             power_start = stbPowerTestInfo.find("power")
             power_end = stbPowerTestInfo.find("Mhz")
             level_end = stbPowerTestInfo.find("dBm")
-            self.ptc_update_msg("updatePowerLevelResult","PASS",stbPowerTestInfo[power_start:power_end]+"Mhz" + stbPowerTestInfo[power_end+3:level_end] + "dBm","")
+            self.ptc_update_msg("updatePowerLevelResult11","PASS",stbPowerTestInfo[power_start:power_end]+"Mhz" + stbPowerTestInfo[power_end+3:level_end] + "dBm","")
             self.reportFile.write(str("PWRCH11=")+stbPowerTestInfo[power_start:power_end]+"Mhz" + stbPowerTestInfo[power_end+3:level_end] + "dBm"'\n')
         else:
-            self.ptc_update_msg("updatePowerLevelResult","FAIL","","")
+            self.ptc_update_msg("updatePowerLevelResult11","FAIL","","")
             self.reportFile.write(str("PWRCH11=")+"0 FAIL"'\n')
+            resultFlag = False
 
     def ptcPerformRfPowerTestCh15(self):
         if self.powerTestMode == 0 :
@@ -121,11 +126,12 @@ class getPTCThread(QThread):
             power_start = stbPowerTestInfo.find("power")
             power_end = stbPowerTestInfo.find("Mhz")
             level_end = stbPowerTestInfo.find("dBm")
-            self.ptc_update_msg("updatePowerLevelResult","PASS",stbPowerTestInfo[power_start:power_end]+"Mhz" + stbPowerTestInfo[power_end+3:level_end] + "dBm","")
+            self.ptc_update_msg("updatePowerLevelResult15","PASS",stbPowerTestInfo[power_start:power_end]+"Mhz" + stbPowerTestInfo[power_end+3:level_end] + "dBm","")
             self.reportFile.write(str("PWRCH15=")+stbPowerTestInfo[power_start:power_end]+"Mhz" + stbPowerTestInfo[power_end+3:level_end] + "dBm"'\n')
         else:
-            self.ptc_update_msg("updatePowerLevelResult","FAIL","","")
+            self.ptc_update_msg("updatePowerLevelResult15","FAIL","","")
             self.reportFile.write(str("PWRCH15=")+"0 FAIL"'\n')
+            resultFlag = False
 
     def ptcPerformRfPowerTestCh20(self):
         if self.powerTestMode == 0 :
@@ -138,11 +144,12 @@ class getPTCThread(QThread):
             power_start = stbPowerTestInfo.find("power")
             power_end = stbPowerTestInfo.find("Mhz")
             level_end = stbPowerTestInfo.find("dBm")
-            self.ptc_update_msg("updatePowerLevelResult","PASS",stbPowerTestInfo[power_start:power_end]+"Mhz" + stbPowerTestInfo[power_end+3:level_end] + "dBm","")
+            self.ptc_update_msg("updatePowerLevelResult20","PASS",stbPowerTestInfo[power_start:power_end]+"Mhz" + stbPowerTestInfo[power_end+3:level_end] + "dBm","")
             self.reportFile.write(str("PWRCH20=")+stbPowerTestInfo[power_start:power_end]+"Mhz" + stbPowerTestInfo[power_end+3:level_end] + "dBm"'\n')
         else:
-            self.ptc_update_msg("updatePowerLevelResult","FAIL","","")
+            self.ptc_update_msg("updatePowerLevelResult20","FAIL","","")
             self.reportFile.write(str("PWRCH20=")+"0 FAIL"'\n')
+            resultFlag = False
 
 
     def ptcPerformRfPowerTestCh25(self):
@@ -156,25 +163,27 @@ class getPTCThread(QThread):
             power_start = stbPowerTestInfo.find("power")
             power_end = stbPowerTestInfo.find("Mhz")
             level_end = stbPowerTestInfo.find("dBm")
-            self.ptc_update_msg("updatePowerLevelResult","PASS",stbPowerTestInfo[power_start:power_end]+"Mhz" + stbPowerTestInfo[power_end+3:level_end] + "dBm","")
+            self.ptc_update_msg("updatePowerLevelResult25","PASS",stbPowerTestInfo[power_start:power_end]+"Mhz" + stbPowerTestInfo[power_end+3:level_end] + "dBm","")
             self.reportFile.write(str("PWRCH25=")+stbPowerTestInfo[power_start:power_end]+"Mhz" + stbPowerTestInfo[power_end+3:level_end] + "dBm"'\n')
         else:
-            self.ptc_update_msg("updatePowerLevelResult","FAIL","","")
+            self.ptc_update_msg("updatePowerLevelResult25","FAIL","","")
             self.reportFile.write(str("PWRCH25=")+"0 FAIL"'\n')
+            resultFlag = False
 
     def ptcPerformRfTest(self):
-
+        resultFlag = True
         stbSnInfo = stbGetSerialNumber(self, self.telnetObj)
         if stbSnInfo !='':
             #self.updateSerialNumberInfo(stbSnInfo[0],stbSnInfo[1])
             self.ptc_update_msg("updateSerialNumberInfo","PASS",stbSnInfo[0],stbSnInfo[1])
-            filename = str(stbSnInfo[0]+".txt")
-            self.reportFile = open(filename,'w')
+            #filename = str(stbSnInfo[0]+".txt")
+            self.stbSN = str(stbSnInfo[0])
+            self.reportFile = open("temp_",'w')
             if(self.reportFile == 0):
                 print("ERROR FILE OPEN")
+                resultFlag = False
             else:
                 print("Report FIle Created ")
-                print(self.reportFile)
                 self.reportFile.write(str("CASSTBID="+stbSnInfo[0])+'\n')
                 self.reportFile.write(str("CHIPNUM="+stbSnInfo[1])+'\n')
 
@@ -186,6 +195,7 @@ class getPTCThread(QThread):
         else:
             self.ptc_update_msg("updateSoftwareVersion","FAIL",stbSoftwareVer,"")
             self.reportFile.write(str("MSTCHTPVERSION=0")+'\n')
+            resultFlag = False
 
         # Dump UEC Code
         stbDumpInfo = stbDumpUecCode(self,self.telnetObj)
@@ -195,6 +205,7 @@ class getPTCThread(QThread):
         else:
             self.ptc_update_msg("updateUecCodeDump","FAIL","","")
             self.reportFile.write(str("UECCODEMD5=0")+'\n')
+            resultFlag = False
 
         # Usb Test
         stbUsbInfo = stbPerformUsbTest(self,self.telnetObj)
@@ -204,6 +215,7 @@ class getPTCThread(QThread):
         else:
             self.ptc_update_msg("updateUsbTestResult","FAIL","","")
             self.reportFile.write(str("USB=0")+'\n')
+            resultFlag = False
 
         #Fan test
         stbFanInfo = stbPerformFanTest(self,self.telnetObj)
@@ -215,6 +227,7 @@ class getPTCThread(QThread):
                 resultValue = 0
                 self.ptc_update_msg("updateFanTestResult","FAIL",stbFanInfo,"")
                 self.reportFile.write(str("FAN=0")+'\n')
+                resultFlag = False
             else:
                 resultValue = 1
                 self.ptc_update_msg("updateFanTestResult","PASS",stbFanInfo,"")
@@ -222,6 +235,7 @@ class getPTCThread(QThread):
         else:
             self.ptc_update_msg("updateFanTestResult","FAIL","","")
             self.reportFile.write(str("FAN=0")+'\n')
+            resultFlag = False
         #Sata test
         stbHddInfo = stbPerformHddTest(self,self.telnetObj)
         if stbHddInfo !='':
@@ -230,6 +244,7 @@ class getPTCThread(QThread):
         else:
             self.ptc_update_msg("updateHddTestResult","FAIL","","")
             self.reportFile.write(str("HDD=0")+'\n')
+            resultFlag = False
 
         #Hdmi_output test
         stbHdmiOutInfo = stbPerformHdmiTest(self, self.telnetObj)
@@ -239,12 +254,14 @@ class getPTCThread(QThread):
         else:
             self.ptc_update_msg("updateHdmiOuputTestResult","FAIL","","")
             self.reportFile.write(str("HDMI=0")+'\n')
+            resultFlag = False
 
         stbProgramMacAdd = stbProgramMacAddress(self, self.telnetObj)
         if stbProgramMacAdd !='':
             self.ptc_update_msg("updateMacAddressResult","PASS",stbProgramMacAdd,"")
         else:
             self.ptc_update_msg("updateMacAddressResult","FAIL","","")
+            resultFlag = False
 
         stbMocaTestInfo = stbPerformMocaTest(self,self.telnetObj,self.serialObj)
         if stbMocaTestInfo !='':
@@ -253,10 +270,11 @@ class getPTCThread(QThread):
         else:
             self.ptc_update_msg("updateMocaResult","FAIL","","")
             self.reportFile.write(str("MOCA=0")+'\n')
+            resultFlag = False
 
         stbZigBeeTestInfo = stbPerformZigBeeTest(self,self.telnetObj,self.serialObj)
         if stbZigBeeTestInfo !='':
-            resultList = re.findall(r'\d+', stbZigBeeTestInfo)
+            resultList = re.findall(r'[-]?\d+', stbZigBeeTestInfo)
             rxVal = int(resultList[0])
             avgRSSI = int(resultList[1])
             avgLQI = int(resultList[2])
@@ -264,16 +282,32 @@ class getPTCThread(QThread):
             print (avgRSSI)
             print (avgLQI)
             stbZigBeeTestInfo = "RX ="+str(rxVal)+ ":" + "Avg RSSI:"+ str(avgRSSI) + " Avg LQI:" + str(avgLQI)
-            if rxVal == 0 and avgLQI == 0:
-                self.ptc_update_msg("updateZigBeeResult","FAIL",stbZigBeeTestInfo,"")
-                self.reportFile.write(str("ZIGBEE=0")+'\n')
-            else:
+            if rxVal >= 990 and rxVal <= 1000 and avgRSSI >= -80 and avgRSSI <= 1 and avgLQI >= -10 and avgLQI <= 80:
                 self.ptc_update_msg("updateZigBeeResult","PASS",stbZigBeeTestInfo,"")
                 self.reportFile.write(str("ZIGBEE=1")+'\n')
+            else:
+                self.ptc_update_msg("updateZigBeeResult","FAIL",stbZigBeeTestInfo,"")
+                self.reportFile.write(str("ZIGBEE=0")+'\n')
+                resultFlag = False
         else:
             self.ptc_update_msg("updateZigBeeResult","FAIL","","")
             self.reportFile.write(str("ZIGBEE=0")+'\n')
+            resultFlag = False
+        #Rf power test
 
+        self.ptcPerformRfPowerTestCh11()
+        self.ptcPerformRfPowerTestCh15()
+        self.ptcPerformRfPowerTestCh20()
+        self.ptcPerformRfPowerTestCh25()
+        # End
+        if resultFlag == True:
+            result = "PASS"
+            self.ptc_update_msg("updateTestResult","PASS","","")
+        elif resultFlag == False:
+            result = "FAIL"
+            self.ptc_update_msg("updateTestResult","FAIL","","")
+
+        self.ptc_update_msg("updatetestEndLabel", result,"","")
 
 class SkedYesUI(QtGui.QMainWindow):
     def __init__(self, parent= None):
@@ -373,7 +407,27 @@ class SkedYesUI(QtGui.QMainWindow):
         self.ui.zigbeeResult.clear()
         self.ui.zigbeeResult.hide()
         self.ui.powerTestValue.hide()
-        self.ui.radioButtonCHStop.setChecked(True)
+        self.ui.dutpowerTestr11result.clear()
+        self.ui.dutpowerTestr15result.clear()
+        self.ui.dutpowerTestr20result.clear()
+        self.ui.dutpowerTestr25result.clear()
+        self.ui.powerTestResult_11.clear()
+        self.ui.powerTestResult_15.clear()
+        self.ui.powerTestResult_20.clear()
+        self.ui.powerTestResult_25.clear()
+        self.ui.powerTestResult_11.hide()
+        self.ui.powerTestResult_15.hide()
+        self.ui.powerTestResult_20.hide()
+        self.ui.powerTestResult_25.hide()
+        self.ui.testEndLabel.clear()
+        self.ui.testEndLabel.hide()
+        self.ui.rfTestResultValueLabel.clear()
+        self.ui.rfTestResultValueLabel.hide()
+        self.ui.fanspeed.clear()
+        self.ui.lnbvalue.clear()
+        self.ui.tunerLnbValue.clear()
+        self.ui.buttonKeysRecivce.clear()
+        self.ui.irKeysRecivce.clear()
 
     def connectToDut(self):
         print ("Connecting to telnet ... ")
@@ -390,12 +444,7 @@ class SkedYesUI(QtGui.QMainWindow):
 
         self.ptcHandlingThread = getPTCThread(self.msgQ,self.telnetObj, self.serialObj, option,value,msg)
         self.connect(self.ptcHandlingThread, SIGNAL("uiUpdateProcess(QString,QString,QString,QString)"),self.uiUpdateProcess)
-        self.ui.buttonDutDisconnect.clicked.connect(self.disconnectFromDut)
-        self.ui.radioButtonCHStop.clicked.connect(self.stopPowerLevelTesting)
-        self.ui.radioButtonCH11.clicked.connect(self.powerLevelChangeCh11)
-        self.ui.radioButtonCH15.clicked.connect(self.powerLevelChangeCh15)
-        self.ui.radioButtonCH20.clicked.connect(self.powerLevelChangeCh20)
-        self.ui.radioButtonCH25.clicked.connect(self.powerLevelChangeCh25)
+        #self.ui.buttonDutDisconnect.clicked.connect(self.disconnectFromDut)
         self.ptcHandlingThread.start()
         self.ptcHandlingThread.startThread()
         self.ui.buttonDutConnect.setEnabled(False)
@@ -449,7 +498,18 @@ class SkedYesUI(QtGui.QMainWindow):
             self.updateZigBeeResult(result,value)
         elif(option == "updatePowerLevelResult"):
             self.updatePowerLevelResult(result,value)
-
+        elif(option == "updatePowerLevelResult11"):
+            self.updatePowerLevelResult11(result,value)
+        elif(option == "updatePowerLevelResult15"):
+            self.updatePowerLevelResult15(result,value)
+        elif(option == "updatePowerLevelResult20"):
+            self.updatePowerLevelResult20(result,value)
+        elif(option == "updatePowerLevelResult25"):
+            self.updatePowerLevelResult25(result,value)
+        elif(option == "updatetestEndLabel"):
+            self.updatetestEndLabel(result, value)
+        elif(option == "updateTestResult"):
+            self.updateTestResult(result, value)
 
     def updateGsConnectionStatus(self,text):
         if text == "Connected":
@@ -567,6 +627,66 @@ class SkedYesUI(QtGui.QMainWindow):
         self.ui.powerTestValue.setText(text)
         self.ui.powerTestValue.show()
 
+    def updatePowerLevelResult11(self,result,text):
+        self.ui.powerTestValue.clear()
+        self.ui.powerTestValue.setText(text)
+        self.ui.powerTestValue.show()
+        self.ui.dutpowerTestr11result.clear()
+        self.ui.dutpowerTestr11result.setText(text)
+        self.ui.dutpowerTestr11result.show()
+        if result == "PASS":
+            self.ui.powerTestResult_11.setStyleSheet(_fromUtf8("QLabel { background-color : green; color : white; }"))
+            self.ui.powerTestResult_11.setText("PASS")
+        else:
+            self.ui.powerTestResult_11.setStyleSheet(_fromUtf8("QLabel { background-color : red; color : white; }"))
+            self.ui.powerTestResult_11.setText("FAIL")
+        self.ui.powerTestResult_11.show()
+
+    def updatePowerLevelResult15(self,result,text):
+        self.ui.powerTestValue.clear()
+        self.ui.powerTestValue.setText(text)
+        self.ui.powerTestValue.show()
+        self.ui.dutpowerTestr15result.clear()
+        self.ui.dutpowerTestr15result.setText(text)
+        self.ui.dutpowerTestr15result.show()
+        if result == "PASS":
+            self.ui.powerTestResult_15.setStyleSheet(_fromUtf8("QLabel { background-color : green; color : white; }"))
+            self.ui.powerTestResult_15.setText("PASS")
+        else:
+            self.ui.powerTestResult_15.setStyleSheet(_fromUtf8("QLabel { background-color : red; color : white; }"))
+            self.ui.powerTestResult_15.setText("FAIL")
+        self.ui.powerTestResult_15.show()
+
+    def updatePowerLevelResult20(self,result,text):
+        self.ui.powerTestValue.clear()
+        self.ui.powerTestValue.setText(text)
+        self.ui.powerTestValue.show()
+        self.ui.dutpowerTestr20result.clear()
+        self.ui.dutpowerTestr20result.setText(text)
+        self.ui.dutpowerTestr20result.show()
+        if result == "PASS":
+            self.ui.powerTestResult_20.setStyleSheet(_fromUtf8("QLabel { background-color : green; color : white; }"))
+            self.ui.powerTestResult_20.setText("PASS")
+        else:
+            self.ui.powerTestResult_20.setStyleSheet(_fromUtf8("QLabel { background-color : red; color : white; }"))
+            self.ui.powerTestResult_20.setText("FAIL")
+        self.ui.powerTestResult_20.show()
+
+    def updatePowerLevelResult25(self,result,text):
+        self.ui.powerTestValue.clear()
+        self.ui.powerTestValue.setText(text)
+        self.ui.powerTestValue.show()
+        self.ui.dutpowerTestr25result.clear()
+        self.ui.dutpowerTestr25result.setText(text)
+        self.ui.dutpowerTestr25result.show()
+        if result == "PASS":
+            self.ui.powerTestResult_25.setStyleSheet(_fromUtf8("QLabel { background-color : green; color : white; }"))
+            self.ui.powerTestResult_25.setText("PASS")
+        else:
+            self.ui.powerTestResult_25.setStyleSheet(_fromUtf8("QLabel { background-color : red; color : white; }"))
+            self.ui.powerTestResult_25.setText("FAIL")
+        self.ui.powerTestResult_25.show()
+
     def updateZigBeeResult(self,result,text):
         print (" updateZigBeeResult")
         self.ui.dutZigbeeResult.setOverwriteMode(True)
@@ -587,8 +707,15 @@ class SkedYesUI(QtGui.QMainWindow):
         self.ui.caStbIdValueLabel.setText(caId)
         self.ui.caChipNumValueLabel.setText(chipNumber)
 
-    def updateTestResult(self, value):
-        self.ui.rfTestResultValueLabel.setText(value)
+    def updateTestResult(self, result, value):
+        if result == "PASS":
+            self.ui.rfTestResultValueLabel.setStyleSheet(_fromUtf8("QLabel { background-color : white; color : green; }"))
+            self.ui.rfTestResultValueLabel.setText("PASS")
+            self.ui.rfTestResultValueLabel.show()
+        elif result == "FAIL":
+            self.ui.rfTestResultValueLabel.setStyleSheet(_fromUtf8("QLabel { background-color : red; color : white; }"))
+            self.ui.rfTestResultValueLabel.setText("FAIL")
+            self.ui.rfTestResultValueLabel.show()
 
     def updateUsbTestProgress(self,text, value):
         self.ui.usbTestProgressBar.setProperty("value",value)
@@ -601,6 +728,16 @@ class SkedYesUI(QtGui.QMainWindow):
     def updateModelName(self, text):
         self.ui.textStbModel.setText(text)
 
+    def updatetestEndLabel(self, result, text):
+        if result == "PASS":
+            self.ui.testEndLabel.setStyleSheet(_fromUtf8("QLabel { background-color : green; color : white; }"))
+            self.ui.testEndLabel.setText("COMPLETE")
+            self.ui.testEndLabel.show()
+        elif result == "FAIL":
+            self.ui.testEndLabel.setStyleSheet(_fromUtf8("QLabel { background-color : red; color : white; }"))
+            self.ui.testEndLabel.setText("ERROR")
+            self.ui.testEndLabel.show()
+
 def stbPerformMocaTest(app,tel,ser):
     findstr= "RX THROUGHPUT PASS"
     tel.telWrite('\x03') #ctrl + c
@@ -612,14 +749,12 @@ def stbPerformMocaTest(app,tel,ser):
     time.sleep(1)
     data = tel.telReadSocket(app)
     tel.telWrite(command_list[TestCommnad.MOCA_TEST_CMD3])
-    data = tel.telReadSocket(app)
-    print (data)
+    #data = tel.telReadSocket(app)
     print ("going to wait for 15 secs to complete the THROUGHPUT test ")
     time.sleep(15)
-    tel.telWrite(command_list[TestCommnad.MOCA_TEST_CMD3])
+    tel.telWrite("ssss")
     data = tel.telReadSocket(app)
     match = re.search(findstr,data)
-    print ([data])
     if match :
         print ("MOCA PASS ")
         return data
@@ -658,10 +793,12 @@ def stbPerformZigBeeTest(app,tel,ser):
         tel.telWrite("ch 20")
         time.sleep(1)
         data = tel.telReadSocket(app)
+
         #Channel Set OK
         tel.telWrite("an 0")
         time.sleep(1)
         data = tel.telReadSocket(app)
+
         tel.telWrite("R") # Reset RX and TX counters
         time.sleep(1)
         data = tel.telReadSocket(app)
@@ -669,8 +806,13 @@ def stbPerformZigBeeTest(app,tel,ser):
         tel.telWrite("rx 1") # Enable Receiver rx 1
         time.sleep(1)
         data = tel.telReadSocket(app)
-        print (data)
-
+        # Grover add for communication issue
+        # Dut always slow one command
+        # add this to enable rx temply
+        # This is not a solution
+        tel.telWrite("ch 20")
+        time.sleep(1)
+        data = tel.telReadSocket(app)
 
     #golden sample setup
     print ("Golden Sample Setup start ")
@@ -740,7 +882,6 @@ def stbPerformZigBeeTest(app,tel,ser):
         ser.serWrite("\r\n")
         data = ser.serRead(app)
         print("GS Ant Set ")
-        print ([data])
         match = re.search(findstrAnSet,data)
         if match:
             print ("GS: Antenna set Found ")
@@ -784,7 +925,6 @@ def stbPerformZigBeeTest(app,tel,ser):
                     retrycnt +=1
 
         print("GS TX Power Set ")
-        print ([data])
         print (" Start sending 1000 packets every 10 ms")
         ser.serWrite("tx 1000 10")
         time.sleep(1)
@@ -809,7 +949,7 @@ def stbPerformZigBeeTest(app,tel,ser):
                     print ("GS: Tx transmission set Not Found Retry")
                     retrycnt +=1
 
-        print ("DUT Setup Done ")
+
 
         data = ser.serRead(app)
         match = re.search(findstrTxTransmissionDone,data)
@@ -830,12 +970,13 @@ def stbPerformZigBeeTest(app,tel,ser):
                 else :
                     print ("GS: Tx transmission set Not Found Retry")
                     retrycnt +=1
+        print ("DUT Setup Done ")
 
-        respondFound = 0
         retrycnt = 0
+        respondFound = 0
         while retrycnt < 15 and respondFound == 0:
             tel.telWrite("P")
-            time.sleep(5)
+            time.sleep(1)
             data = tel.telReadSocket(app)
             match = re.search(findstr,data)
             if match :
@@ -1066,8 +1207,7 @@ def stbPerformChannelPowerTesting(app,tel,ser,initMode,chnum):
     result = os.system(path)
     if result == 1:
         print("File open failed")
-        ui.updateTelEditor("File open failed !")
-        return
+        return ''
     path = "powerLevel.txt"
     fp = open(path, "r")
     line = ""
@@ -1445,7 +1585,7 @@ except AttributeError:
 if __name__ == "__main__":
     app = QtGui.QApplication(sys.argv)
     myapp = SkedYesUI()
-    myapp.setWindowTitle(_translate("RFTEST", "SKED YES V1.07", None))
+    myapp.setWindowTitle(_translate("RFTEST", "SKED YES V1.08", None))
     myapp.show()
     QtCore.QObject.connect(app, QtCore.SIGNAL(_fromUtf8("lastWindowClosed()")),forceCloseApp)
     signal.signal(signal.SIGINT, signal.SIG_DFL)
