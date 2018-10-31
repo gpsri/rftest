@@ -61,6 +61,10 @@ class getPTCThread(QThread):
             print (" %s " % msg)
             if(msg == "startRfTest"):
                 self.ptcPerformRfTest()
+            elif(msg == "startsimpleTest"):
+                self.ptcPerformsimpleTest()
+            elif(msg == "startpowerlevelTest"):
+                self.ptcPerformRfPowerTest()
             elif(msg == "stopRfPowerTest"):
                 self.ptcRfPowerTestStop()
             elif(msg == "startRfPowerTestCh11"):
@@ -71,13 +75,20 @@ class getPTCThread(QThread):
                 self.ptcPerformRfPowerTestCh20()
             elif(msg == "startRfPowerTestCh25"):
                 self.ptcPerformRfPowerTestCh25()
+            elif(msg == "createReportFile"):
+                print("createReportFile")
+                self.reportFile = open("temp_",'w')
+                if (self.reportFile == 0):
+                    print("Can't create Report")
             elif(msg == "closeReportFile"):
                 print("closeReportFileCalled")
                 srcFile =str(self.reportFile.name);
                 print (srcFile);
                 self.reportFile.close()
                 #copyfile(srcFile, "Outbuffer_tmp.txt")
-                if os.path.exists(srcFile) == True and self.stbSN != '':
+                if os.path.exists(srcFile) == True :
+                    if (self.stbSN == ''):
+                        self.stbSN = "NoSN"
                     copyfile(srcFile, self.stbSN + ".txt")
                     os.remove(srcFile)
             self.sleep(1)
@@ -97,7 +108,35 @@ class getPTCThread(QThread):
             else:
                 self.ptc_update_msg("updatePowerLevelResult","FAIL","","")
 
+    def ptcPerformRfPowerTest(self):
+        global resultFlag
+        resultFlag = True
+        stbSnInfo = stbGetSerialNumber(self, self.telnetObj)
+        if stbSnInfo !='':
+            self.stbSN = str(stbSnInfo[0])
+            if(self.reportFile == 0):
+                print("ERROR FILE OPEN")
+                resultFlag = False
+            else:
+                self.reportFile.write(str("CASSTBID="+stbSnInfo[0])+'\n')
+                self.reportFile.write(str("CHIPNUM="+stbSnInfo[1])+'\n')
+        self.ptcPerformRfPowerTestCh11()
+        self.ptcPerformRfPowerTestCh15()
+        self.ptcPerformRfPowerTestCh20()
+        self.ptcPerformRfPowerTestCh25()
+        if resultFlag == True:
+            result = "PASS"
+            self.ptc_update_msg("updateTestResult","PASS","","")
+        elif resultFlag == False:
+            result = "FAIL"
+            self.ptc_update_msg("updateTestResult","FAIL","","")
+        self.ptc_update_msg("updatetestEndLabel", result,"","")
+        self.telnetObj.telWrite('\x03') #ctrl + c
+        time.sleep(.2)
+
+
     def ptcPerformRfPowerTestCh11(self):
+        global resultFlag
         if self.powerTestMode == 0 :
             stbPowerTestInfo = stbPerformChannelPowerTesting(self,self.telnetObj,self.serialObj,1,11)
             self.powerTestMode = 1
@@ -108,14 +147,23 @@ class getPTCThread(QThread):
             power_start = stbPowerTestInfo.find("power")
             power_end = stbPowerTestInfo.find("Mhz")
             level_end = stbPowerTestInfo.find("dBm")
-            self.ptc_update_msg("updatePowerLevelResult11","PASS",stbPowerTestInfo[power_start:power_end]+"Mhz" + stbPowerTestInfo[power_end+3:level_end] + "dBm","")
-            self.reportFile.write(str("PWRCH11=")+stbPowerTestInfo[power_start:power_end]+"Mhz" + stbPowerTestInfo[power_end+3:level_end] + "dBm"'\n')
+            resultList = re.findall(r'[-]?\d+', stbPowerTestInfo)
+            freq = int(resultList[0])
+            powerlevel = int(resultList[1])
+            if (powerlevel < -30 or powerlevel > -20) :
+                self.ptc_update_msg("updatePowerLevelResult11","FAIL",stbPowerTestInfo[power_start:power_end]+"Mhz" + stbPowerTestInfo[power_end+3:level_end] + "dBm","")
+                self.reportFile.write(str("PWRCH11=")+stbPowerTestInfo[power_start:power_end]+"Mhz" + stbPowerTestInfo[power_end+3:level_end] + "dBm "+"FAIL"'\n')
+                resultFlag = False
+            else :
+                self.ptc_update_msg("updatePowerLevelResult11","PASS",stbPowerTestInfo[power_start:power_end]+"Mhz" + stbPowerTestInfo[power_end+3:level_end] + "dBm","")
+                self.reportFile.write(str("PWRCH11=")+stbPowerTestInfo[power_start:power_end]+"Mhz" + stbPowerTestInfo[power_end+3:level_end] + "dBm"'\n')
         else:
             self.ptc_update_msg("updatePowerLevelResult11","FAIL","","")
             self.reportFile.write(str("PWRCH11=")+"0 FAIL"'\n')
             resultFlag = False
 
     def ptcPerformRfPowerTestCh15(self):
+        global resultFlag
         if self.powerTestMode == 0 :
             stbPowerTestInfo = stbPerformChannelPowerTesting(self,self.telnetObj,self.serialObj,1,15)
             self.powerTestMode = 1
@@ -126,14 +174,23 @@ class getPTCThread(QThread):
             power_start = stbPowerTestInfo.find("power")
             power_end = stbPowerTestInfo.find("Mhz")
             level_end = stbPowerTestInfo.find("dBm")
-            self.ptc_update_msg("updatePowerLevelResult15","PASS",stbPowerTestInfo[power_start:power_end]+"Mhz" + stbPowerTestInfo[power_end+3:level_end] + "dBm","")
-            self.reportFile.write(str("PWRCH15=")+stbPowerTestInfo[power_start:power_end]+"Mhz" + stbPowerTestInfo[power_end+3:level_end] + "dBm"'\n')
+            resultList = re.findall(r'[-]?\d+', stbPowerTestInfo)
+            freq = int(resultList[0])
+            powerlevel = int(resultList[1])
+            if (powerlevel < -30 or powerlevel > -20) :
+                self.ptc_update_msg("updatePowerLevelResult15","FAIL",stbPowerTestInfo[power_start:power_end]+"Mhz" + stbPowerTestInfo[power_end+3:level_end] + "dBm","")
+                self.reportFile.write(str("PWRCH15=")+stbPowerTestInfo[power_start:power_end]+"Mhz" + stbPowerTestInfo[power_end+3:level_end] + "dBm "+"FAIL"'\n')
+                resultFlag = False
+            else :
+                self.ptc_update_msg("updatePowerLevelResult15","PASS",stbPowerTestInfo[power_start:power_end]+"Mhz" + stbPowerTestInfo[power_end+3:level_end] + "dBm","")
+                self.reportFile.write(str("PWRCH15=")+stbPowerTestInfo[power_start:power_end]+"Mhz" + stbPowerTestInfo[power_end+3:level_end] + "dBm"'\n')
         else:
             self.ptc_update_msg("updatePowerLevelResult15","FAIL","","")
             self.reportFile.write(str("PWRCH15=")+"0 FAIL"'\n')
             resultFlag = False
 
     def ptcPerformRfPowerTestCh20(self):
+        global resultFlag
         if self.powerTestMode == 0 :
             stbPowerTestInfo = stbPerformChannelPowerTesting(self,self.telnetObj,self.serialObj,1,20)
             self.powerTestMode = 1
@@ -144,8 +201,16 @@ class getPTCThread(QThread):
             power_start = stbPowerTestInfo.find("power")
             power_end = stbPowerTestInfo.find("Mhz")
             level_end = stbPowerTestInfo.find("dBm")
-            self.ptc_update_msg("updatePowerLevelResult20","PASS",stbPowerTestInfo[power_start:power_end]+"Mhz" + stbPowerTestInfo[power_end+3:level_end] + "dBm","")
-            self.reportFile.write(str("PWRCH20=")+stbPowerTestInfo[power_start:power_end]+"Mhz" + stbPowerTestInfo[power_end+3:level_end] + "dBm"'\n')
+            resultList = re.findall(r'[-]?\d+', stbPowerTestInfo)
+            freq = int(resultList[0])
+            powerlevel = int(resultList[1])
+            if (powerlevel < -30 or powerlevel > -20) :
+                self.ptc_update_msg("updatePowerLevelResult20","FAIL",stbPowerTestInfo[power_start:power_end]+"Mhz" + stbPowerTestInfo[power_end+3:level_end] + "dBm","")
+                self.reportFile.write(str("PWRCH20=")+stbPowerTestInfo[power_start:power_end]+"Mhz" + stbPowerTestInfo[power_end+3:level_end] + "dBm "+"FAIL"'\n')
+                resultFlag = False
+            else :
+                self.ptc_update_msg("updatePowerLevelResult20","PASS",stbPowerTestInfo[power_start:power_end]+"Mhz" + stbPowerTestInfo[power_end+3:level_end] + "dBm","")
+                self.reportFile.write(str("PWRCH20=")+stbPowerTestInfo[power_start:power_end]+"Mhz" + stbPowerTestInfo[power_end+3:level_end] + "dBm"'\n')
         else:
             self.ptc_update_msg("updatePowerLevelResult20","FAIL","","")
             self.reportFile.write(str("PWRCH20=")+"0 FAIL"'\n')
@@ -153,6 +218,7 @@ class getPTCThread(QThread):
 
 
     def ptcPerformRfPowerTestCh25(self):
+        global resultFlag
         if self.powerTestMode == 0 :
             stbPowerTestInfo = stbPerformChannelPowerTesting(self,self.telnetObj,self.serialObj,1,25)
             self.powerTestMode = 1
@@ -163,14 +229,178 @@ class getPTCThread(QThread):
             power_start = stbPowerTestInfo.find("power")
             power_end = stbPowerTestInfo.find("Mhz")
             level_end = stbPowerTestInfo.find("dBm")
-            self.ptc_update_msg("updatePowerLevelResult25","PASS",stbPowerTestInfo[power_start:power_end]+"Mhz" + stbPowerTestInfo[power_end+3:level_end] + "dBm","")
-            self.reportFile.write(str("PWRCH25=")+stbPowerTestInfo[power_start:power_end]+"Mhz" + stbPowerTestInfo[power_end+3:level_end] + "dBm"'\n')
+            resultList = re.findall(r'[-]?\d+', stbPowerTestInfo)
+            freq = int(resultList[0])
+            powerlevel = int(resultList[1])
+            if (powerlevel < -30 or powerlevel > -20) :
+                self.ptc_update_msg("updatePowerLevelResult25","FAIL",stbPowerTestInfo[power_start:power_end]+"Mhz" + stbPowerTestInfo[power_end+3:level_end] + "dBm","")
+                self.reportFile.write(str("PWRCH25=")+stbPowerTestInfo[power_start:power_end]+"Mhz" + stbPowerTestInfo[power_end+3:level_end] + "dBm "+"FAIL"'\n')
+                resultFlag = False
+            else :
+                self.ptc_update_msg("updatePowerLevelResult25","PASS",stbPowerTestInfo[power_start:power_end]+"Mhz" + stbPowerTestInfo[power_end+3:level_end] + "dBm","")
+                self.reportFile.write(str("PWRCH25=")+stbPowerTestInfo[power_start:power_end]+"Mhz" + stbPowerTestInfo[power_end+3:level_end] + "dBm"'\n')
         else:
             self.ptc_update_msg("updatePowerLevelResult25","FAIL","","")
             self.reportFile.write(str("PWRCH25=")+"0 FAIL"'\n')
             resultFlag = False
 
+
+
+    def ptcPerformsimpleTest(self):
+        resultFlag = True
+        stbSnInfo = stbGetSerialNumber(self, self.telnetObj)
+        if stbSnInfo !='':
+            #self.updateSerialNumberInfo(stbSnInfo[0],stbSnInfo[1])
+            self.ptc_update_msg("updateSerialNumberInfo","PASS",stbSnInfo[0],stbSnInfo[1])
+            #filename = str(stbSnInfo[0]+".txt")
+            self.stbSN = str(stbSnInfo[0])
+            if(self.reportFile == 0):
+                print("ERROR FILE OPEN")
+                resultFlag = False
+            else:
+                self.reportFile.write(str("CASSTBID="+stbSnInfo[0])+'\n')
+                self.reportFile.write(str("CHIPNUM="+stbSnInfo[1])+'\n')
+
+        #Get the Software Version
+        stbSoftwareVer = stbGetSoftwareVersion(self, self.telnetObj)
+        if stbSoftwareVer !='':
+            self.ptc_update_msg("updateSoftwareVersion","PASS",stbSoftwareVer,"")
+            self.reportFile.write(str("MSTCHTPVERSION="+stbSoftwareVer)+'\n')
+        else:
+            self.ptc_update_msg("updateSoftwareVersion","FAIL",stbSoftwareVer,"")
+            self.reportFile.write(str("MSTCHTPVERSION=0")+'\n')
+            resultFlag = False
+
+        # Dump UEC Code
+        stbDumpInfo = stbDumpUecCode(self,self.telnetObj)
+        if stbDumpInfo !='':
+            self.ptc_update_msg("updateUecCodeDump","PASS",stbDumpInfo,"")
+            self.reportFile.write(str("UECCODEMD5="+stbDumpInfo)+'\n')
+        else:
+            self.ptc_update_msg("updateUecCodeDump","FAIL","","")
+            self.reportFile.write(str("UECCODEMD5=0")+'\n')
+            resultFlag = False
+
+        # Usb Test
+        stbUsbInfo = stbPerformUsbTest(self,self.telnetObj)
+        if stbUsbInfo !='':
+            self.ptc_update_msg("updateUsbTestResult","PASS",stbUsbInfo,"")
+            self.reportFile.write(str("USB=1")+'\n')
+        else:
+            self.ptc_update_msg("updateUsbTestResult","FAIL","","")
+            self.reportFile.write(str("USB=0")+'\n')
+            resultFlag = False
+
+        #Fan test
+        stbFanInfo = stbPerformFanTest(self,self.telnetObj)
+        if stbFanInfo !='':
+            speedlist = re.findall(r'\d+', stbFanInfo)
+            speedValue = int(speedlist[0])
+            stbFanInfo = "SPEED : " + "%s"  % speedValue
+            if speedValue < 2150 or speedValue > 4150:
+                resultValue = 0
+                self.ptc_update_msg("updateFanTestResult","FAIL",stbFanInfo,"")
+                self.reportFile.write(str("FAN=0")+'\n')
+                resultFlag = False
+            else:
+                resultValue = 1
+                self.ptc_update_msg("updateFanTestResult","PASS",stbFanInfo,"")
+                self.reportFile.write(str("FAN=1")+'\n')
+        else:
+            self.ptc_update_msg("updateFanTestResult","FAIL","","")
+            self.reportFile.write(str("FAN=0")+'\n')
+            resultFlag = False
+        #Sata test
+        stbHddInfo = stbPerformHddTest(self,self.telnetObj)
+        if stbHddInfo !='':
+            self.ptc_update_msg("updateHddTestResult","PASS",stbHddInfo,"")
+            self.reportFile.write(str("HDD=1")+'\n')
+        else:
+            self.ptc_update_msg("updateHddTestResult","FAIL","","")
+            self.reportFile.write(str("HDD=0")+'\n')
+            resultFlag = False
+
+        #Hdmi_output test
+        stbHdmiOutInfo = stbPerformHdmiTest(self, self.telnetObj)
+        if stbHdmiOutInfo !='':
+            self.ptc_update_msg("updateHdmiOuputTestResult","PASS",stbHdmiOutInfo,"")
+            self.reportFile.write(str("HDMI=1")+'\n')
+        else:
+            self.ptc_update_msg("updateHdmiOuputTestResult","FAIL","","")
+            self.reportFile.write(str("HDMI=0")+'\n')
+            resultFlag = False
+        # End
+        if resultFlag == True:
+            result = "PASS"
+            self.ptc_update_msg("updateTestResult","PASS","","")
+        elif resultFlag == False:
+            result = "FAIL"
+            self.ptc_update_msg("updateTestResult","FAIL","","")
+
+        self.ptc_update_msg("updatetestEndLabel", result,"","")
+
     def ptcPerformRfTest(self):
+
+        stbSnInfo = stbGetSerialNumber(self, self.telnetObj)
+        if stbSnInfo !='':
+            self.stbSN = str(stbSnInfo[0])
+            if(self.reportFile == 0):
+                print("ERROR FILE OPEN")
+                resultFlag = False
+            else:
+                self.reportFile.write(str("CASSTBID="+stbSnInfo[0])+'\n')
+                self.reportFile.write(str("CHIPNUM="+stbSnInfo[1])+'\n')
+
+        stbProgramMacAdd = stbProgramMacAddress(self, self.telnetObj)
+        if stbProgramMacAdd !='':
+            self.ptc_update_msg("updateMacAddressResult","PASS",stbProgramMacAdd,"")
+        else:
+            self.ptc_update_msg("updateMacAddressResult","FAIL","","")
+            resultFlag = False
+
+        stbMocaTestInfo = stbPerformMocaTest(self,self.telnetObj,self.serialObj)
+        if stbMocaTestInfo !='':
+            self.ptc_update_msg("updateMocaResult","PASS",stbMocaTestInfo,"")
+            self.reportFile.write(str("MOCA=1")+'\n')
+        else:
+            self.ptc_update_msg("updateMocaResult","FAIL","","")
+            self.reportFile.write(str("MOCA=0")+'\n')
+            resultFlag = False
+
+        stbZigBeeTestInfo = stbPerformZigBeeTest(self,self.telnetObj,self.serialObj)
+        if stbZigBeeTestInfo !='':
+            resultList = re.findall(r'[-]?\d+', stbZigBeeTestInfo)
+            rxVal = int(resultList[0])
+            avgRSSI = int(resultList[1])
+            avgLQI = int(resultList[2])
+            print (rxVal)
+            print (avgRSSI)
+            print (avgLQI)
+            stbZigBeeTestInfo = "RX ="+str(rxVal)+ ":" + "Avg RSSI:"+ str(avgRSSI) + " Avg LQI:" + str(avgLQI)
+            if rxVal >= 990 and rxVal <= 1000 and avgRSSI >= -80 and avgRSSI <= 1 and avgLQI >= -10 and avgLQI <= 80:
+                self.ptc_update_msg("updateZigBeeResult","PASS",stbZigBeeTestInfo,"")
+                self.reportFile.write(str("ZIGBEE=1")+'\n')
+            else:
+                self.ptc_update_msg("updateZigBeeResult","FAIL",stbZigBeeTestInfo,"")
+                self.reportFile.write(str("ZIGBEE=0")+'\n')
+                resultFlag = False
+        else:
+            self.ptc_update_msg("updateZigBeeResult","FAIL","","")
+            self.reportFile.write(str("ZIGBEE=0")+'\n')
+            resultFlag = False
+
+        # End
+        if resultFlag == True:
+            result = "PASS"
+            self.ptc_update_msg("updateTestResult","PASS","","")
+        elif resultFlag == False:
+            result = "FAIL"
+            self.ptc_update_msg("updateTestResult","FAIL","","")
+
+        self.ptc_update_msg("updatetestEndLabel", result,"","")
+
+
+    '''def ptcPerformRfTest(self):
         resultFlag = True
         stbSnInfo = stbGetSerialNumber(self, self.telnetObj)
         if stbSnInfo !='':
@@ -307,7 +537,7 @@ class getPTCThread(QThread):
             result = "FAIL"
             self.ptc_update_msg("updateTestResult","FAIL","","")
 
-        self.ptc_update_msg("updatetestEndLabel", result,"","")
+        self.ptc_update_msg("updatetestEndLabel", result,"","")'''
 
 class SkedYesUI(QtGui.QMainWindow):
     def __init__(self, parent= None):
@@ -335,13 +565,17 @@ class SkedYesUI(QtGui.QMainWindow):
 
 
     def disconnectFromDut(self):
+        self.msgQ.put("closeReportFile")
+        time.sleep(1)
         self.telnetObj.telWrite('\x03') #ctrl + c
         time.sleep(1)
         self.telnetObj.telWrite("exit") #Exit
-        self.msgQ.put("closeReportFile")
         self.ptcHandlingThread.stopThread()
         self.ui.buttonDutConnect.setEnabled(True)
         self.ui.buttonDutDisconnect.setEnabled(False)
+        self.ui.buttonStartSimpleTest.clicked.disconnect()
+        self.ui.buttonStartRfTest.clicked.disconnect()
+        self.ui.buttonStartPowerLevelTest.clicked.disconnect()
         self.updateDutConnectionStatus(" Not Connected ")
         self.clearTestResults()
 
@@ -423,11 +657,7 @@ class SkedYesUI(QtGui.QMainWindow):
         self.ui.testEndLabel.hide()
         self.ui.rfTestResultValueLabel.clear()
         self.ui.rfTestResultValueLabel.hide()
-        self.ui.fanspeed.clear()
-        self.ui.lnbvalue.clear()
-        self.ui.tunerLnbValue.clear()
-        self.ui.buttonKeysRecivce.clear()
-        self.ui.irKeysRecivce.clear()
+
 
     def connectToDut(self):
         print ("Connecting to telnet ... ")
@@ -442,6 +672,8 @@ class SkedYesUI(QtGui.QMainWindow):
         else:
             self.serialObj =1
 
+        self.msgQ.put("createReportFile")
+
         self.ptcHandlingThread = getPTCThread(self.msgQ,self.telnetObj, self.serialObj, option,value,msg)
         self.connect(self.ptcHandlingThread, SIGNAL("uiUpdateProcess(QString,QString,QString,QString)"),self.uiUpdateProcess)
         #self.ui.buttonDutDisconnect.clicked.connect(self.disconnectFromDut)
@@ -449,7 +681,15 @@ class SkedYesUI(QtGui.QMainWindow):
         self.ptcHandlingThread.startThread()
         self.ui.buttonDutConnect.setEnabled(False)
         self.ui.buttonDutDisconnect.setEnabled(True)
-        self.msgQ.put("startRfTest")
+        self.ui.buttonStartPowerLevelTest.setEnabled(True)
+        self.ui.buttonStartSimpleTest.setEnabled(True)
+        self.ui.buttonStartRfTest.setEnabled(True)
+        self.ui.buttonStartPowerLevelTest.clicked.connect(self.ptc_start_powerlevel_test)
+        self.ui.buttonStartSimpleTest.clicked.connect(self.ptc_start_simple_test)
+        self.ui.buttonStartRfTest.clicked.connect(self.ptc_start_rf_test)
+
+
+        #self.msgQ.put("startRfTest")
         # auto test enabled
         #self.ptcPerformRfTest()
     def stopPowerLevelTesting(self):
@@ -466,6 +706,18 @@ class SkedYesUI(QtGui.QMainWindow):
 
     def powerLevelChangeCh25(self):
         self.msgQ.put("startRfPowerTestCh25")
+
+    def ptc_start_simple_test(self):
+        self.ui.buttonStartSimpleTest.setEnabled(False)
+        self.msgQ.put("startsimpleTest")
+
+    def ptc_start_powerlevel_test(self):
+        self.ui.buttonStartPowerLevelTest.setEnabled(False)
+        self.msgQ.put("startpowerlevelTest")
+
+    def ptc_start_rf_test(self):
+        self.ui.buttonStartRfTest.setEnabled(False)
+        self.msgQ.put("startRfTest")
 
     def ptc_update_systemInfo(self):
         stbSoftwareVer = stbGetSoftwareVersion(self, self.telnetObj)
@@ -746,13 +998,12 @@ def stbPerformMocaTest(app,tel,ser):
     time.sleep(.2)
     data = tel.telReadSocket(app)
     tel.telWrite(command_list[TestCommnad.MOCA_TEST_CMD2])
-    time.sleep(1)
+    time.sleep(10)
     data = tel.telReadSocket(app)
     tel.telWrite(command_list[TestCommnad.MOCA_TEST_CMD3])
     #data = tel.telReadSocket(app)
     print ("going to wait for 15 secs to complete the THROUGHPUT test ")
     time.sleep(15)
-    tel.telWrite("ssss")
     data = tel.telReadSocket(app)
     match = re.search(findstr,data)
     if match :
@@ -791,27 +1042,27 @@ def stbPerformZigBeeTest(app,tel,ser):
     if match:
         #Init done
         tel.telWrite("ch 20")
-        time.sleep(1)
+        time.sleep(.2)
         data = tel.telReadSocket(app)
 
         #Channel Set OK
         tel.telWrite("an 0")
-        time.sleep(1)
+        time.sleep(.2)
         data = tel.telReadSocket(app)
 
         tel.telWrite("R") # Reset RX and TX counters
-        time.sleep(1)
+        time.sleep(.2)
         data = tel.telReadSocket(app)
 
         tel.telWrite("rx 1") # Enable Receiver rx 1
-        time.sleep(1)
+        time.sleep(.2)
         data = tel.telReadSocket(app)
         # Grover add for communication issue
         # Dut always slow one command
         # add this to enable rx temply
         # This is not a solution
         tel.telWrite("ch 20")
-        time.sleep(1)
+        time.sleep(.2)
         data = tel.telReadSocket(app)
 
     #golden sample setup
@@ -825,7 +1076,7 @@ def stbPerformZigBeeTest(app,tel,ser):
 
     #send the Command to Golden Sample
     ser.serWrite('\x03') #ctrl + c
-    time.sleep(1)
+    time.sleep(.2)
     ser.serWrite("GP510_transceiver 2")
     time.sleep(2)
     data = ser.serRead(app)
@@ -852,7 +1103,7 @@ def stbPerformZigBeeTest(app,tel,ser):
         print("GS Init Done Start sending commands")
         #Init done
         ser.serWrite("ch 20")
-        time.sleep(1)
+        time.sleep(.2)
         ser.serWrite("\r\n")
         data = ser.serRead(app)
         print("GS Ch Set ")
@@ -878,7 +1129,7 @@ def stbPerformZigBeeTest(app,tel,ser):
 
         #Channel Set OK
         ser.serWrite("an 0")
-        time.sleep(1)
+        time.sleep(.2)
         ser.serWrite("\r\n")
         data = ser.serRead(app)
         print("GS Ant Set ")
@@ -902,7 +1153,7 @@ def stbPerformZigBeeTest(app,tel,ser):
                     retrycnt +=1
 
         ser.serWrite("w 3") # set TX Power
-        time.sleep(1)
+        time.sleep(.2)
         ser.serWrite("\r\n")
         data = ser.serRead(app)
         match = re.search(findstrTxPwrSet,data)
@@ -927,7 +1178,7 @@ def stbPerformZigBeeTest(app,tel,ser):
         print("GS TX Power Set ")
         print (" Start sending 1000 packets every 10 ms")
         ser.serWrite("tx 1000 10")
-        time.sleep(1)
+        time.sleep(.2)
         ser.serWrite("\r\n")
         data = ser.serRead(app)
         match = re.search(findstrTxTransmission,data)
@@ -991,12 +1242,12 @@ def stbPerformZigBeeTest(app,tel,ser):
         print ("ZigBee FAIL")
 
     tel.telWrite("rx 0")
-    time.sleep(1)
+    time.sleep(.2)
     ser.serWrite("\r\n")
     tel.telWrite('\x03') #ctrl + c
-    time.sleep(1)
+    time.sleep(.2)
     ser.serWrite('\x03') #ctrl + c
-    time.sleep(1)
+    time.sleep(.2)
     value = data.split('\n')
     for i in value:
         print ([i])
@@ -1274,12 +1525,12 @@ def stbPrepareGsRfTest(app,ser):
     #Config the network
     write_cmd = "ifconfig eth0 192.192.192.1"
     ser.serWrite(write_cmd)
-    time.sleep(1)
+    time.sleep(.2)
     data = ser.serRead(app)
     print (data)
     write_cmd = "ifconfig eth1 192.192.168.1"
     ser.serWrite(write_cmd)
-    time.sleep(1)
+    time.sleep(.2)
     data = ser.serRead(app)
     print (data)
 
@@ -1307,10 +1558,10 @@ def stbProgramMacAddress( app, tel) :
     statusStr = "Write MAC successfully"
 
     tel.telWrite('\x03') #ctrl + c
-    time.sleep(1)
+    time.sleep(.2)
     write_cmd = command_list[TestCommnad.WRITE_MAC] + " "+"001222FFFFF0"
     tel.telWrite(write_cmd)
-    time.sleep(1)
+    time.sleep(.2)
     print (time.time())
     waitforfind = 1
     while waitforfind:
@@ -1326,7 +1577,7 @@ def stbProgramMacAddress( app, tel) :
 
 def stbGetSoftwareVersion( app, tel) :
     tel.telWrite(command_list[TestCommnad.GET_VER])
-    time.sleep(1)
+    time.sleep(.2)
     data = tel.telReadSocket(app)
     print ([data])
     swver = data[(data.find("stb")):]
@@ -1375,7 +1626,7 @@ def stbDumpUecCode(app,tel) :
             continue
 
 def stbGetSerialNumber(app, tel):
-
+    snInfo = []
     snfindString= "/root/htp/generateSTBSN"
     tel.telWrite(command_list[TestCommnad.GET_STBSN])
     time.sleep(1)
@@ -1393,7 +1644,7 @@ def stbGetSerialNumber(app, tel):
         print ([stbid])
         chipNum = (data[16:24])
         print ([chipNum])
-        snInfo= [stbid, chipNum ]
+        snInfo = [stbid, chipNum]
     return snInfo
 
 
@@ -1401,7 +1652,7 @@ def stbGetSerialNumber(app, tel):
 def stbGetMacAddress( app, tel) :
     macaddrFindString = ":"
     tel.telWrite(command_list[TestCommnad.GET_MACADR])
-    time.sleep(1)
+    time.sleep(.2)
     waitforfind = 1
     while waitforfind:
         data = tel.telReadSocket(app)
@@ -1435,9 +1686,9 @@ def stbPerformFanTest(app,tel):
     tel.telWrite(command_list[TestCommnad.FAN_TEST_CMD3])
     time.sleep(.2)
     tel.telWrite(command_list[TestCommnad.FAN_TEST_CMD4])
-    time.sleep(3)
+    time.sleep(1)
     tel.telWrite(command_list[TestCommnad.FAN_TEST_CMD5])
-    time.sleep(2)
+    time.sleep(1)
     data = tel.telReadSocket(app)
     #print list(data)
     match = re.search(fanPassString,data)
@@ -1511,7 +1762,7 @@ def stbPerformUsbTest(app,tel):
     usbFailString = "Test all Failed"
     usbNotInsertString = "Cannot find USB storage Device"
     tel.telWrite(command_list[TestCommnad.USB_TEST])
-    time.sleep(2)
+    time.sleep(1)
     data = tel.telReadSocket(app)
     #print list(data)
     match = re.search(usbNotInsertString,data)
@@ -1585,7 +1836,7 @@ except AttributeError:
 if __name__ == "__main__":
     app = QtGui.QApplication(sys.argv)
     myapp = SkedYesUI()
-    myapp.setWindowTitle(_translate("RFTEST", "SKED YES V1.08", None))
+    myapp.setWindowTitle(_translate("RFTEST", "SKED YES V1.10", None))
     myapp.show()
     QtCore.QObject.connect(app, QtCore.SIGNAL(_fromUtf8("lastWindowClosed()")),forceCloseApp)
     signal.signal(signal.SIGINT, signal.SIG_DFL)
