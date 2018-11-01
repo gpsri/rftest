@@ -47,7 +47,6 @@ class getPTCThread(QThread):
         self.serialObj = serialObj
         self.powerTestMode = 0
         self.reportFile = open("temp_", 'w')
-        self.stbSN = ""
 
     def __del__(self):
         self.wait()
@@ -87,9 +86,12 @@ class getPTCThread(QThread):
                 self.reportFile.close()
                 #copyfile(srcFile, "Outbuffer_tmp.txt")
                 if os.path.exists(srcFile) == True :
-                    if (self.stbSN == ''):
-                        self.stbSN = "NoSN"
-                    copyfile(srcFile, self.stbSN + ".txt")
+                    stbSnInfo = stbGetSerialNumber(self, self.telnetObj)
+                    if stbSnInfo !='':
+                        stbSN = str(stbSnInfo[0])
+                    else :
+                        stbSN = "NOSN"
+                    copyfile(srcFile, stbSN + ".txt")
                     os.remove(srcFile)
             self.sleep(1)
             self.msgQ.task_done()
@@ -111,15 +113,6 @@ class getPTCThread(QThread):
     def ptcPerformRfPowerTest(self):
         global resultFlag
         resultFlag = True
-        stbSnInfo = stbGetSerialNumber(self, self.telnetObj)
-        if stbSnInfo !='':
-            self.stbSN = str(stbSnInfo[0])
-            if(self.reportFile == 0):
-                print("ERROR FILE OPEN")
-                resultFlag = False
-            else:
-                self.reportFile.write(str("CASSTBID="+stbSnInfo[0])+'\n')
-                self.reportFile.write(str("CHIPNUM="+stbSnInfo[1])+'\n')
         self.ptcPerformRfPowerTestCh11()
         self.ptcPerformRfPowerTestCh15()
         self.ptcPerformRfPowerTestCh20()
@@ -133,7 +126,7 @@ class getPTCThread(QThread):
         self.ptc_update_msg("updatetestEndLabel", result,"","")
         self.telnetObj.telWrite('\x03') #ctrl + c
         time.sleep(.2)
-
+        data =self.telnetObj.telReadSocket(self)
 
     def ptcPerformRfPowerTestCh11(self):
         global resultFlag
@@ -338,19 +331,12 @@ class getPTCThread(QThread):
             self.ptc_update_msg("updateTestResult","FAIL","","")
 
         self.ptc_update_msg("updatetestEndLabel", result,"","")
+        self.telnetObj.telWrite('\x03') #ctrl + c
+        time.sleep(.2)
+        data = self.telnetObj.telReadSocket(self)
 
     def ptcPerformRfTest(self):
-
-        stbSnInfo = stbGetSerialNumber(self, self.telnetObj)
-        if stbSnInfo !='':
-            self.stbSN = str(stbSnInfo[0])
-            if(self.reportFile == 0):
-                print("ERROR FILE OPEN")
-                resultFlag = False
-            else:
-                self.reportFile.write(str("CASSTBID="+stbSnInfo[0])+'\n')
-                self.reportFile.write(str("CHIPNUM="+stbSnInfo[1])+'\n')
-
+        global resultFlag
         stbProgramMacAdd = stbProgramMacAddress(self, self.telnetObj)
         if stbProgramMacAdd !='':
             self.ptc_update_msg("updateMacAddressResult","PASS",stbProgramMacAdd,"")
@@ -398,8 +384,9 @@ class getPTCThread(QThread):
             self.ptc_update_msg("updateTestResult","FAIL","","")
 
         self.ptc_update_msg("updatetestEndLabel", result,"","")
-
-
+        self.telnetObj.telWrite('\x03') #ctrl + c
+        time.sleep(.2)
+        data =self.telnetObj.telReadSocket(self)
     '''def ptcPerformRfTest(self):
         resultFlag = True
         stbSnInfo = stbGetSerialNumber(self, self.telnetObj)
@@ -1791,6 +1778,7 @@ def stbPerformHdmiTest(app,tel):
     tel.telWrite('\x03') #ctrl + c
     tel.telWrite(command_list[TestCommnad.HDMI_OUTPUT_TEST])
     time.sleep(2)
+    data = tel.telReadSocket(app)
     return "Check Video"
 
 def stbPerformHddTest(app,tel):
