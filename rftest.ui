@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>727</width>
+    <width>636</width>
     <height>479</height>
    </rect>
   </property>
@@ -983,6 +983,97 @@
      <set>Qt::AlignJustify|Qt::AlignVCenter</set>
     </property>
    </widget>
+   <widget class="QCheckBox" name="checkBoxMAC">
+    <property name="geometry">
+     <rect>
+      <x>360</x>
+      <y>20</y>
+      <width>73</width>
+      <height>22</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+   </widget>
+   <widget class="QCheckBox" name="checkBoxMOCA">
+    <property name="geometry">
+     <rect>
+      <x>360</x>
+      <y>50</y>
+      <width>73</width>
+      <height>22</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+   </widget>
+   <widget class="QCheckBox" name="checkBoxZIGBEE">
+    <property name="geometry">
+     <rect>
+      <x>360</x>
+      <y>80</y>
+      <width>73</width>
+      <height>22</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+   </widget>
+   <widget class="QCheckBox" name="checkBoxch11">
+    <property name="geometry">
+     <rect>
+      <x>360</x>
+      <y>150</y>
+      <width>73</width>
+      <height>22</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+   </widget>
+   <widget class="QCheckBox" name="checkBoxch15">
+    <property name="geometry">
+     <rect>
+      <x>360</x>
+      <y>170</y>
+      <width>73</width>
+      <height>22</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+   </widget>
+   <widget class="QCheckBox" name="checkBoxch20">
+    <property name="geometry">
+     <rect>
+      <x>360</x>
+      <y>190</y>
+      <width>73</width>
+      <height>22</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+   </widget>
+   <widget class="QCheckBox" name="checkBoxch25">
+    <property name="geometry">
+     <rect>
+      <x>360</x>
+      <y>210</y>
+      <width>73</width>
+      <height>22</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+   </widget>
   </widget>
   <widget class="QTextEdit" name="usbValue">
    <property name="geometry">
@@ -1035,7 +1126,7 @@
     <string>USB</string>
    </property>
   </widget>
-  <widget class="QPushButton" name="buttonReset">
+  <widget class="QPushButton" name="buttonSave">
    <property name="geometry">
     <rect>
      <x>550</x>
@@ -1050,7 +1141,7 @@
     </font>
    </property>
    <property name="text">
-    <string>Reset</string>
+    <string>Save</string>
    </property>
   </widget>
   <widget class="QLabel" name="hdmiResult">
@@ -1374,58 +1465,82 @@
     <number>0</number>
    </property>
   </widget>
-  <widget class="QPushButton" name="buttonStartSimpleTest">
+  <widget class="QCheckBox" name="checkBoxMSTC">
    <property name="geometry">
     <rect>
-     <x>640</x>
+     <x>360</x>
      <y>80</y>
-     <width>72</width>
+     <width>73</width>
      <height>22</height>
     </rect>
    </property>
-   <property name="font">
-    <font>
-     <pointsize>7</pointsize>
-    </font>
-   </property>
    <property name="text">
-    <string>Start</string>
+    <string/>
    </property>
   </widget>
-  <widget class="QPushButton" name="buttonStartRfTest">
+  <widget class="QCheckBox" name="checkBoxMSTC_UEC_DUMP">
    <property name="geometry">
     <rect>
-     <x>640</x>
-     <y>240</y>
-     <width>72</width>
+     <x>360</x>
+     <y>106</y>
+     <width>73</width>
      <height>22</height>
     </rect>
    </property>
-   <property name="font">
-    <font>
-     <pointsize>7</pointsize>
-    </font>
-   </property>
    <property name="text">
-    <string>Start</string>
+    <string/>
    </property>
   </widget>
-  <widget class="QPushButton" name="buttonStartPowerLevelTest">
+  <widget class="QCheckBox" name="checkBoxUSB">
    <property name="geometry">
     <rect>
-     <x>640</x>
-     <y>360</y>
-     <width>72</width>
+     <x>360</x>
+     <y>132</y>
+     <width>73</width>
      <height>22</height>
     </rect>
    </property>
-   <property name="font">
-    <font>
-     <pointsize>7</pointsize>
-    </font>
+   <property name="text">
+    <string/>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="checkBoxFan">
+   <property name="geometry">
+    <rect>
+     <x>360</x>
+     <y>158</y>
+     <width>73</width>
+     <height>22</height>
+    </rect>
    </property>
    <property name="text">
-    <string>Start</string>
+    <string/>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="checkBoxFan_SATA">
+   <property name="geometry">
+    <rect>
+     <x>360</x>
+     <y>184</y>
+     <width>73</width>
+     <height>22</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string/>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="checkBoxHDMI">
+   <property name="geometry">
+    <rect>
+     <x>360</x>
+     <y>210</y>
+     <width>73</width>
+     <height>22</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string/>
    </property>
   </widget>
  </widget>

@@ -59,13 +59,27 @@ class getPTCThread(QThread):
             msg = self.msgQ.get()
             print (" %s " % msg)
             if(msg == "startRfTest"):
-                self.ptcPerformRfTest()
-            elif(msg == "startsimpleTest"):
-                self.ptcPerformsimpleTest()
-            elif(msg == "startpowerlevelTest"):
-                self.ptcPerformRfPowerTest()
-            elif(msg == "stopRfPowerTest"):
                 self.ptcRfPowerTestStop()
+            elif(msg == "startGetMSTCVersion"):
+                self.ptcPerformGetSerialNumber()
+                self.ptcPerformGetSoftwareVersion()
+            elif(msg == "startDumpUECCode"):
+                self.ptcPerformDumpUEC()
+            elif(msg == "startUSBTest"):
+                self.ptcPerformUSB()
+            elif(msg == "startFANTest"):
+                self.ptcPerformFan()
+            elif(msg == "startSATATest"):
+                self.ptcPerformSata()
+            elif(msg == "startHDMITest"):
+                self.ptcPerformHDMI()
+            elif(msg == "startMACTest"):
+                self.ptcPerformMAC()
+            elif(msg == "startMOCATest"):
+                self.ptcPerformMAC()
+                self.ptcPerformMOCA()
+            elif(msg == "startZIGBEETest"):
+                self.ptcPerformZIGBEE()
             elif(msg == "startRfPowerTestCh11"):
                 self.ptcPerformRfPowerTestCh11()
             elif(msg == "startRfPowerTestCh15"):
@@ -74,6 +88,20 @@ class getPTCThread(QThread):
                 self.ptcPerformRfPowerTestCh20()
             elif(msg == "startRfPowerTestCh25"):
                 self.ptcPerformRfPowerTestCh25()
+            elif(msg == "endTest"):
+                print("test complete")
+                # End
+                if resultFlag == True:
+                    result = "PASS"
+                    self.ptc_update_msg("updateTestResult","PASS","","")
+                elif resultFlag == False:
+                    result = "FAIL"
+                    self.ptc_update_msg("updateTestResult","FAIL","","")
+
+                self.ptc_update_msg("updatetestEndLabel", result,"","")
+                self.telnetObj.telWrite('\x03') #ctrl + c
+                time.sleep(.2)
+                data = self.telnetObj.telReadSocket(self)
             elif(msg == "createReportFile"):
                 print("createReportFile")
                 self.reportFile = open("temp_",'w')
@@ -110,24 +138,6 @@ class getPTCThread(QThread):
             else:
                 self.ptc_update_msg("updatePowerLevelResult","FAIL","","")
 
-    def ptcPerformRfPowerTest(self):
-        global resultFlag
-        resultFlag = True
-        self.ptcPerformRfPowerTestCh11()
-        self.ptcPerformRfPowerTestCh15()
-        self.ptcPerformRfPowerTestCh20()
-        self.ptcPerformRfPowerTestCh25()
-        if resultFlag == True:
-            result = "PASS"
-            self.ptc_update_msg("updateTestResult","PASS","","")
-        elif resultFlag == False:
-            result = "FAIL"
-            self.ptc_update_msg("updateTestResult","FAIL","","")
-        self.ptc_update_msg("updatetestEndLabel", result,"","")
-        self.telnetObj.telWrite('\x03') #ctrl + c
-        time.sleep(.2)
-        data =self.telnetObj.telReadSocket(self)
-
     def ptcPerformRfPowerTestCh11(self):
         global resultFlag
         if self.powerTestMode == 0 :
@@ -143,7 +153,7 @@ class getPTCThread(QThread):
             resultList = re.findall(r'[-]?\d+', stbPowerTestInfo)
             freq = int(resultList[0])
             powerlevel = int(resultList[1])
-            if (powerlevel < -30 or powerlevel > -20) :
+            if (powerlevel < -30 or powerlevel > -18) :
                 self.ptc_update_msg("updatePowerLevelResult11","FAIL",stbPowerTestInfo[power_start:power_end]+"Mhz" + stbPowerTestInfo[power_end+3:level_end] + "dBm","")
                 self.reportFile.write(str("PWRCH11=")+stbPowerTestInfo[power_start:power_end]+"Mhz" + stbPowerTestInfo[power_end+3:level_end] + "dBm "+"FAIL"'\n')
                 resultFlag = False
@@ -237,10 +247,8 @@ class getPTCThread(QThread):
             self.reportFile.write(str("PWRCH25=")+"0 FAIL"'\n')
             resultFlag = False
 
-
-
-    def ptcPerformsimpleTest(self):
-        resultFlag = True
+    def ptcPerformGetSerialNumber(self):
+        global resultFlag
         stbSnInfo = stbGetSerialNumber(self, self.telnetObj)
         if stbSnInfo !='':
             #self.updateSerialNumberInfo(stbSnInfo[0],stbSnInfo[1])
@@ -254,7 +262,9 @@ class getPTCThread(QThread):
                 self.reportFile.write(str("CASSTBID="+stbSnInfo[0])+'\n')
                 self.reportFile.write(str("CHIPNUM="+stbSnInfo[1])+'\n')
 
+    def ptcPerformGetSoftwareVersion(self):
         #Get the Software Version
+        global resultFlag
         stbSoftwareVer = stbGetSoftwareVersion(self, self.telnetObj)
         if stbSoftwareVer !='':
             self.ptc_update_msg("updateSoftwareVersion","PASS",stbSoftwareVer,"")
@@ -264,7 +274,9 @@ class getPTCThread(QThread):
             self.reportFile.write(str("MSTCHTPVERSION=0")+'\n')
             resultFlag = False
 
+    def ptcPerformDumpUEC(self):
         # Dump UEC Code
+        global resultFlag
         stbDumpInfo = stbDumpUecCode(self,self.telnetObj)
         if stbDumpInfo !='':
             self.ptc_update_msg("updateUecCodeDump","PASS",stbDumpInfo,"")
@@ -274,6 +286,8 @@ class getPTCThread(QThread):
             self.reportFile.write(str("UECCODEMD5=0")+'\n')
             resultFlag = False
 
+    def ptcPerformUSB(self):
+        global resultFlag
         # Usb Test
         stbUsbInfo = stbPerformUsbTest(self,self.telnetObj)
         if stbUsbInfo !='':
@@ -284,6 +298,8 @@ class getPTCThread(QThread):
             self.reportFile.write(str("USB=0")+'\n')
             resultFlag = False
 
+    def ptcPerformFan(self):
+        global resultFlag
         #Fan test
         stbFanInfo = stbPerformFanTest(self,self.telnetObj)
         if stbFanInfo !='':
@@ -303,6 +319,10 @@ class getPTCThread(QThread):
             self.ptc_update_msg("updateFanTestResult","FAIL","","")
             self.reportFile.write(str("FAN=0")+'\n')
             resultFlag = False
+
+
+    def ptcPerformSata(self):
+        global resultFlag
         #Sata test
         stbHddInfo = stbPerformHddTest(self,self.telnetObj)
         if stbHddInfo !='':
@@ -313,6 +333,9 @@ class getPTCThread(QThread):
             self.reportFile.write(str("HDD=0")+'\n')
             resultFlag = False
 
+
+    def ptcPerformHDMI(self):
+        global resultFlag
         #Hdmi_output test
         stbHdmiOutInfo = stbPerformHdmiTest(self, self.telnetObj)
         if stbHdmiOutInfo !='':
@@ -322,20 +345,8 @@ class getPTCThread(QThread):
             self.ptc_update_msg("updateHdmiOuputTestResult","FAIL","","")
             self.reportFile.write(str("HDMI=0")+'\n')
             resultFlag = False
-        # End
-        if resultFlag == True:
-            result = "PASS"
-            self.ptc_update_msg("updateTestResult","PASS","","")
-        elif resultFlag == False:
-            result = "FAIL"
-            self.ptc_update_msg("updateTestResult","FAIL","","")
 
-        self.ptc_update_msg("updatetestEndLabel", result,"","")
-        self.telnetObj.telWrite('\x03') #ctrl + c
-        time.sleep(.2)
-        data = self.telnetObj.telReadSocket(self)
-
-    def ptcPerformRfTest(self):
+    def ptcPerformMAC(self):
         global resultFlag
         stbProgramMacAdd = stbProgramMacAddress(self, self.telnetObj)
         if stbProgramMacAdd !='':
@@ -344,6 +355,8 @@ class getPTCThread(QThread):
             self.ptc_update_msg("updateMacAddressResult","FAIL","","")
             resultFlag = False
 
+    def ptcPerformMOCA(self):
+        global resultFlag
         stbMocaTestInfo = stbPerformMocaTest(self,self.telnetObj,self.serialObj)
         if stbMocaTestInfo !='':
             self.ptc_update_msg("updateMocaResult","PASS",stbMocaTestInfo,"")
@@ -353,6 +366,8 @@ class getPTCThread(QThread):
             self.reportFile.write(str("MOCA=0")+'\n')
             resultFlag = False
 
+    def ptcPerformZIGBEE(self):
+        global resultFlag
         stbZigBeeTestInfo = stbPerformZigBeeTest(self,self.telnetObj,self.serialObj)
         if stbZigBeeTestInfo !='':
             resultList = re.findall(r'[-]?\d+', stbZigBeeTestInfo)
@@ -375,6 +390,7 @@ class getPTCThread(QThread):
             self.reportFile.write(str("ZIGBEE=0")+'\n')
             resultFlag = False
 
+    def ptcPerformRfTest(self):
         # End
         if resultFlag == True:
             result = "PASS"
@@ -387,144 +403,6 @@ class getPTCThread(QThread):
         self.telnetObj.telWrite('\x03') #ctrl + c
         time.sleep(.2)
         data =self.telnetObj.telReadSocket(self)
-    '''def ptcPerformRfTest(self):
-        resultFlag = True
-        stbSnInfo = stbGetSerialNumber(self, self.telnetObj)
-        if stbSnInfo !='':
-            #self.updateSerialNumberInfo(stbSnInfo[0],stbSnInfo[1])
-            self.ptc_update_msg("updateSerialNumberInfo","PASS",stbSnInfo[0],stbSnInfo[1])
-            #filename = str(stbSnInfo[0]+".txt")
-            self.stbSN = str(stbSnInfo[0])
-            self.reportFile = open("temp_",'w')
-            if(self.reportFile == 0):
-                print("ERROR FILE OPEN")
-                resultFlag = False
-            else:
-                print("Report FIle Created ")
-                self.reportFile.write(str("CASSTBID="+stbSnInfo[0])+'\n')
-                self.reportFile.write(str("CHIPNUM="+stbSnInfo[1])+'\n')
-
-        #Get the Software Version
-        stbSoftwareVer = stbGetSoftwareVersion(self, self.telnetObj)
-        if stbSoftwareVer !='':
-            self.ptc_update_msg("updateSoftwareVersion","PASS",stbSoftwareVer,"")
-            self.reportFile.write(str("MSTCHTPVERSION="+stbSoftwareVer)+'\n')
-        else:
-            self.ptc_update_msg("updateSoftwareVersion","FAIL",stbSoftwareVer,"")
-            self.reportFile.write(str("MSTCHTPVERSION=0")+'\n')
-            resultFlag = False
-
-        # Dump UEC Code
-        stbDumpInfo = stbDumpUecCode(self,self.telnetObj)
-        if stbDumpInfo !='':
-            self.ptc_update_msg("updateUecCodeDump","PASS",stbDumpInfo,"")
-            self.reportFile.write(str("UECCODEMD5="+stbDumpInfo)+'\n')
-        else:
-            self.ptc_update_msg("updateUecCodeDump","FAIL","","")
-            self.reportFile.write(str("UECCODEMD5=0")+'\n')
-            resultFlag = False
-
-        # Usb Test
-        stbUsbInfo = stbPerformUsbTest(self,self.telnetObj)
-        if stbUsbInfo !='':
-            self.ptc_update_msg("updateUsbTestResult","PASS",stbUsbInfo,"")
-            self.reportFile.write(str("USB=1")+'\n')
-        else:
-            self.ptc_update_msg("updateUsbTestResult","FAIL","","")
-            self.reportFile.write(str("USB=0")+'\n')
-            resultFlag = False
-
-        #Fan test
-        stbFanInfo = stbPerformFanTest(self,self.telnetObj)
-        if stbFanInfo !='':
-            speedlist = re.findall(r'\d+', stbFanInfo)
-            speedValue = int(speedlist[0])
-            stbFanInfo = "SPEED : " + "%s"  % speedValue
-            if speedValue < 2150 or speedValue > 4150:
-                resultValue = 0
-                self.ptc_update_msg("updateFanTestResult","FAIL",stbFanInfo,"")
-                self.reportFile.write(str("FAN=0")+'\n')
-                resultFlag = False
-            else:
-                resultValue = 1
-                self.ptc_update_msg("updateFanTestResult","PASS",stbFanInfo,"")
-                self.reportFile.write(str("FAN=1")+'\n')
-        else:
-            self.ptc_update_msg("updateFanTestResult","FAIL","","")
-            self.reportFile.write(str("FAN=0")+'\n')
-            resultFlag = False
-        #Sata test
-        stbHddInfo = stbPerformHddTest(self,self.telnetObj)
-        if stbHddInfo !='':
-            self.ptc_update_msg("updateHddTestResult","PASS",stbHddInfo,"")
-            self.reportFile.write(str("HDD=1")+'\n')
-        else:
-            self.ptc_update_msg("updateHddTestResult","FAIL","","")
-            self.reportFile.write(str("HDD=0")+'\n')
-            resultFlag = False
-
-        #Hdmi_output test
-        stbHdmiOutInfo = stbPerformHdmiTest(self, self.telnetObj)
-        if stbHdmiOutInfo !='':
-            self.ptc_update_msg("updateHdmiOuputTestResult","PASS",stbHdmiOutInfo,"")
-            self.reportFile.write(str("HDMI=1")+'\n')
-        else:
-            self.ptc_update_msg("updateHdmiOuputTestResult","FAIL","","")
-            self.reportFile.write(str("HDMI=0")+'\n')
-            resultFlag = False
-
-        stbProgramMacAdd = stbProgramMacAddress(self, self.telnetObj)
-        if stbProgramMacAdd !='':
-            self.ptc_update_msg("updateMacAddressResult","PASS",stbProgramMacAdd,"")
-        else:
-            self.ptc_update_msg("updateMacAddressResult","FAIL","","")
-            resultFlag = False
-
-        stbMocaTestInfo = stbPerformMocaTest(self,self.telnetObj,self.serialObj)
-        if stbMocaTestInfo !='':
-            self.ptc_update_msg("updateMocaResult","PASS",stbMocaTestInfo,"")
-            self.reportFile.write(str("MOCA=1")+'\n')
-        else:
-            self.ptc_update_msg("updateMocaResult","FAIL","","")
-            self.reportFile.write(str("MOCA=0")+'\n')
-            resultFlag = False
-
-        stbZigBeeTestInfo = stbPerformZigBeeTest(self,self.telnetObj,self.serialObj)
-        if stbZigBeeTestInfo !='':
-            resultList = re.findall(r'[-]?\d+', stbZigBeeTestInfo)
-            rxVal = int(resultList[0])
-            avgRSSI = int(resultList[1])
-            avgLQI = int(resultList[2])
-            print (rxVal)
-            print (avgRSSI)
-            print (avgLQI)
-            stbZigBeeTestInfo = "RX ="+str(rxVal)+ ":" + "Avg RSSI:"+ str(avgRSSI) + " Avg LQI:" + str(avgLQI)
-            if rxVal >= 990 and rxVal <= 1000 and avgRSSI >= -80 and avgRSSI <= 1 and avgLQI >= -10 and avgLQI <= 80:
-                self.ptc_update_msg("updateZigBeeResult","PASS",stbZigBeeTestInfo,"")
-                self.reportFile.write(str("ZIGBEE=1")+'\n')
-            else:
-                self.ptc_update_msg("updateZigBeeResult","FAIL",stbZigBeeTestInfo,"")
-                self.reportFile.write(str("ZIGBEE=0")+'\n')
-                resultFlag = False
-        else:
-            self.ptc_update_msg("updateZigBeeResult","FAIL","","")
-            self.reportFile.write(str("ZIGBEE=0")+'\n')
-            resultFlag = False
-        #Rf power test
-
-        self.ptcPerformRfPowerTestCh11()
-        self.ptcPerformRfPowerTestCh15()
-        self.ptcPerformRfPowerTestCh20()
-        self.ptcPerformRfPowerTestCh25()
-        # End
-        if resultFlag == True:
-            result = "PASS"
-            self.ptc_update_msg("updateTestResult","PASS","","")
-        elif resultFlag == False:
-            result = "FAIL"
-            self.ptc_update_msg("updateTestResult","FAIL","","")
-
-        self.ptc_update_msg("updatetestEndLabel", result,"","")'''
 
 class SkedYesUI(QtGui.QMainWindow):
     def __init__(self, parent= None):
@@ -534,8 +412,10 @@ class SkedYesUI(QtGui.QMainWindow):
 
         self.ui.setupUi(self)
         self.initResetDefaultValues()
+        self.readCheckBoxHistory()
         self.ui.buttonGoldenSampleConnect.clicked.connect(self.connectToGsStb)
         self.ui.buttonDutConnect.clicked.connect(self.connectToDut)
+        self.ui.buttonSave.clicked.connect(self.saveCheckBoxStatus)
         self.ui.buttonDutDisconnect.clicked.connect(self.disconnectFromDut)
         self.msgQ = queue.Queue()
         self.serialObj = 0;
@@ -550,8 +430,112 @@ class SkedYesUI(QtGui.QMainWindow):
 
         self.ui.dutIpAddressText.setPlainText("192.192.192.2")
 
+    def getcheckboxstatus(self):
+        checkboxStatus = ""
+        if self.ui.checkBoxMSTC.isChecked():
+            checkboxStatus = checkboxStatus + "1"
+        else :
+            checkboxStatus = checkboxStatus + "0"
+        if self.ui.checkBoxMSTC_UEC_DUMP.isChecked():
+            checkboxStatus = checkboxStatus + "1"
+        else :
+            checkboxStatus = checkboxStatus + "0"
+        if self.ui.checkBoxUSB.isChecked():
+            checkboxStatus = checkboxStatus + "1"
+        else :
+            checkboxStatus = checkboxStatus + "0"
+        if self.ui.checkBoxFan.isChecked():
+            checkboxStatus = checkboxStatus + "1"
+        else :
+            checkboxStatus = checkboxStatus + "0"
+        if self.ui.checkBoxFan_SATA.isChecked():
+            checkboxStatus = checkboxStatus + "1"
+        else :
+            checkboxStatus = checkboxStatus + "0"
+        if self.ui.checkBoxHDMI.isChecked():
+            checkboxStatus = checkboxStatus + "1"
+        else :
+            checkboxStatus = checkboxStatus + "0"
+        if self.ui.checkBoxMAC.isChecked():
+            checkboxStatus = checkboxStatus + "1"
+        else :
+            checkboxStatus = checkboxStatus + "0"
+        if self.ui.checkBoxMOCA.isChecked():
+            checkboxStatus = checkboxStatus + "1"
+        else :
+            checkboxStatus = checkboxStatus + "0"
+        if self.ui.checkBoxZIGBEE.isChecked():
+            checkboxStatus = checkboxStatus + "1"
+        else :
+            checkboxStatus = checkboxStatus + "0"
+        if self.ui.checkBoxch11.isChecked():
+            checkboxStatus = checkboxStatus + "1"
+        else :
+            checkboxStatus = checkboxStatus + "0"
+        if self.ui.checkBoxch15.isChecked():
+            checkboxStatus = checkboxStatus + "1"
+        else :
+            checkboxStatus = checkboxStatus + "0"
+        if self.ui.checkBoxch20.isChecked():
+            checkboxStatus = checkboxStatus + "1"
+        else :
+            checkboxStatus = checkboxStatus + "0"
+        if self.ui.checkBoxch25.isChecked():
+            checkboxStatus = checkboxStatus + "1"
+        else :
+            checkboxStatus = checkboxStatus + "0"
+        return checkboxStatus
+
+    def saveCheckBoxStatus(self):
+        file = open("cb.his",'w')
+        if (file == 0):
+            return
+        status = self.getcheckboxstatus()
+        file.write(status)
+        file.close()
+
+    def readCheckBoxHistory(self):
+        if os.path.exists("cb.his") == False :
+            return
+        # Read checkbox status last use
+        file = open("cb.his",'r')
+        if (file == 0):
+            return
+        line = file.readline()
+        file.close()
+        if len(line) < 13:
+            return
+        if (line[0] == '1'):
+            self.ui.checkBoxMSTC.setChecked(True)
+        if (line[1] == '1'):
+            self.ui.checkBoxMSTC_UEC_DUMP.setChecked(True)
+        if (line[2] == '1'):
+            self.ui.checkBoxUSB.setChecked(True)
+        if (line[3] == '1'):
+            self.ui.checkBoxFan.setChecked(True)
+        if (line[4] == '1'):
+            self.ui.checkBoxFan_SATA.setChecked(True)
+        if (line[5] == '1'):
+            self.ui.checkBoxHDMI.setChecked(True)
+        if (line[6] == '1'):
+            self.ui.checkBoxMAC.setChecked(True)
+        if (line[7] == '1'):
+            self.ui.checkBoxMOCA.setChecked(True)
+        if (line[8] == '1'):
+            self.ui.checkBoxZIGBEE.setChecked(True)
+        if (line[9] == '1'):
+            self.ui.checkBoxch11.setChecked(True)
+        if (line[10] == '1'):
+            self.ui.checkBoxch15.setChecked(True)
+        if (line[11] == '1'):
+            self.ui.checkBoxch20.setChecked(True)
+        if (line[12] == '1'):
+            self.ui.checkBoxch25.setChecked(True)
+
 
     def disconnectFromDut(self):
+        global resultFlag
+        self.saveCheckBoxStatus()
         self.msgQ.put("closeReportFile")
         time.sleep(1)
         self.telnetObj.telWrite('\x03') #ctrl + c
@@ -560,11 +544,9 @@ class SkedYesUI(QtGui.QMainWindow):
         self.ptcHandlingThread.stopThread()
         self.ui.buttonDutConnect.setEnabled(True)
         self.ui.buttonDutDisconnect.setEnabled(False)
-        self.ui.buttonStartSimpleTest.clicked.disconnect()
-        self.ui.buttonStartRfTest.clicked.disconnect()
-        self.ui.buttonStartPowerLevelTest.clicked.disconnect()
         self.updateDutConnectionStatus(" Not Connected ")
         self.clearTestResults()
+        resultFlag = True
 
 
     def connectToGsStb(self):
@@ -668,17 +650,39 @@ class SkedYesUI(QtGui.QMainWindow):
         self.ptcHandlingThread.startThread()
         self.ui.buttonDutConnect.setEnabled(False)
         self.ui.buttonDutDisconnect.setEnabled(True)
-        self.ui.buttonStartPowerLevelTest.setEnabled(True)
-        self.ui.buttonStartSimpleTest.setEnabled(True)
-        self.ui.buttonStartRfTest.setEnabled(True)
-        self.ui.buttonStartPowerLevelTest.clicked.connect(self.ptc_start_powerlevel_test)
-        self.ui.buttonStartSimpleTest.clicked.connect(self.ptc_start_simple_test)
-        self.ui.buttonStartRfTest.clicked.connect(self.ptc_start_rf_test)
-
-
+        self.checkRfTestItem()
         #self.msgQ.put("startRfTest")
         # auto test enabled
         #self.ptcPerformRfTest()
+    def checkRfTestItem(self):
+        if self.ui.checkBoxMSTC.isChecked():
+            self.msgQ.put("startGetMSTCVersion")
+        if self.ui.checkBoxMSTC_UEC_DUMP.isChecked():
+            self.msgQ.put("startDumpUECCode")
+        if self.ui.checkBoxUSB.isChecked():
+            self.msgQ.put("startUSBTest")
+        if self.ui.checkBoxFan.isChecked():
+            self.msgQ.put("startFANTest")
+        if self.ui.checkBoxFan_SATA.isChecked():
+            self.msgQ.put("startSATATest")
+        if self.ui.checkBoxHDMI.isChecked():
+            self.msgQ.put("startHDMITest")
+        if self.ui.checkBoxMAC.isChecked():
+            self.msgQ.put("startMACTest")
+        if self.ui.checkBoxMOCA.isChecked():
+            self.msgQ.put("startMOCATest")
+        if self.ui.checkBoxZIGBEE.isChecked():
+            self.msgQ.put("startZIGBEETest")
+        if self.ui.checkBoxch11.isChecked():
+            self.msgQ.put("startRfPowerTestCh11")
+        if self.ui.checkBoxch15.isChecked():
+            self.msgQ.put("startRfPowerTestCh15")
+        if self.ui.checkBoxch20.isChecked():
+            self.msgQ.put("startRfPowerTestCh20")
+        if self.ui.checkBoxch25.isChecked():
+            self.msgQ.put("startRfPowerTestCh25")
+        self.msgQ.put("endTest")
+
     def stopPowerLevelTesting(self):
         self.msgQ.put("stopRfPowerTest")
 
@@ -693,18 +697,6 @@ class SkedYesUI(QtGui.QMainWindow):
 
     def powerLevelChangeCh25(self):
         self.msgQ.put("startRfPowerTestCh25")
-
-    def ptc_start_simple_test(self):
-        self.ui.buttonStartSimpleTest.setEnabled(False)
-        self.msgQ.put("startsimpleTest")
-
-    def ptc_start_powerlevel_test(self):
-        self.ui.buttonStartPowerLevelTest.setEnabled(False)
-        self.msgQ.put("startpowerlevelTest")
-
-    def ptc_start_rf_test(self):
-        self.ui.buttonStartRfTest.setEnabled(False)
-        self.msgQ.put("startRfTest")
 
     def ptc_update_systemInfo(self):
         stbSoftwareVer = stbGetSoftwareVersion(self, self.telnetObj)
@@ -1824,7 +1816,7 @@ except AttributeError:
 if __name__ == "__main__":
     app = QtGui.QApplication(sys.argv)
     myapp = SkedYesUI()
-    myapp.setWindowTitle(_translate("RFTEST", "SKED YES V1.10", None))
+    myapp.setWindowTitle(_translate("RFTEST", "SKED YES V1.11", None))
     myapp.show()
     QtCore.QObject.connect(app, QtCore.SIGNAL(_fromUtf8("lastWindowClosed()")),forceCloseApp)
     signal.signal(signal.SIGINT, signal.SIG_DFL)
