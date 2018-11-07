@@ -16,24 +16,6 @@
   <property name="autoFillBackground">
    <bool>true</bool>
   </property>
-  <widget class="QPushButton" name="buttonDutDisconnect">
-   <property name="geometry">
-    <rect>
-     <x>330</x>
-     <y>40</y>
-     <width>72</width>
-     <height>22</height>
-    </rect>
-   </property>
-   <property name="font">
-    <font>
-     <pointsize>7</pointsize>
-    </font>
-   </property>
-   <property name="text">
-    <string>DU_Disconnect</string>
-   </property>
-  </widget>
   <widget class="QLabel" name="caStbIdValueLabel">
    <property name="geometry">
     <rect>
@@ -131,8 +113,8 @@
     <rect>
      <x>250</x>
      <y>40</y>
-     <width>72</width>
-     <height>22</height>
+     <width>151</width>
+     <height>31</height>
     </rect>
    </property>
    <property name="font">

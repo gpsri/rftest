@@ -102,25 +102,14 @@ class getPTCThread(QThread):
                 self.telnetObj.telWrite('\x03') #ctrl + c
                 time.sleep(.2)
                 data = self.telnetObj.telReadSocket(self)
+                self.disconnectFromDut()
             elif(msg == "createReportFile"):
                 print("createReportFile")
                 self.reportFile = open("temp_",'w')
                 if (self.reportFile == 0):
                     print("Can't create Report")
             elif(msg == "closeReportFile"):
-                print("closeReportFileCalled")
-                srcFile =str(self.reportFile.name);
-                print (srcFile);
-                self.reportFile.close()
-                #copyfile(srcFile, "Outbuffer_tmp.txt")
-                if os.path.exists(srcFile) == True :
-                    stbSnInfo = stbGetSerialNumber(self, self.telnetObj)
-                    if stbSnInfo !='':
-                        stbSN = str(stbSnInfo[0])
-                    else :
-                        stbSN = "NOSN"
-                    copyfile(srcFile, stbSN + ".txt")
-                    os.remove(srcFile)
+                self.closeReportFile()
             self.sleep(1)
             self.msgQ.task_done()
 
@@ -128,6 +117,34 @@ class getPTCThread(QThread):
         self.runThread = 1
     def stopThread(self):
         self.runThread = 0
+
+    def closeReportFile(self):
+        print("closeReportFileCalled")
+        srcFile =str(self.reportFile.name);
+        print (srcFile);
+        self.reportFile.close()
+        #copyfile(srcFile, "Outbuffer_tmp.txt")
+        if os.path.exists(srcFile) == True :
+            stbSnInfo = stbGetSerialNumber(self, self.telnetObj)
+            if stbSnInfo !='':
+                stbSN = str(stbSnInfo[0])
+            else :
+                stbSN = "NOSN"
+            copyfile(srcFile, stbSN + ".txt")
+            os.remove(srcFile)
+
+    def disconnectFromDut(self):
+        global resultFlag
+        self.closeReportFile()
+        time.sleep(1)
+        self.telnetObj.telWrite('\x03') #ctrl + c
+        time.sleep(1)
+        self.telnetObj.telWrite("exit") #Exit
+        self.ptc_update_msg("updateDutConnectionStatus", " Not Connected ", "", "")
+        self.ptc_update_msg("updateConnectbotton", "PASS","", "")
+        self.stopThread()
+        resultFlag = True
+
 
     def ptcRfPowerTestStop(self):
         if self.powerTestMode != 0 :
@@ -416,10 +433,8 @@ class SkedYesUI(QtGui.QMainWindow):
         self.ui.buttonGoldenSampleConnect.clicked.connect(self.connectToGsStb)
         self.ui.buttonDutConnect.clicked.connect(self.connectToDut)
         self.ui.buttonSave.clicked.connect(self.saveCheckBoxStatus)
-        self.ui.buttonDutDisconnect.clicked.connect(self.disconnectFromDut)
-        self.msgQ = queue.Queue()
         self.serialObj = 0;
-        #self.msgQ = Queue()
+        self.msgQ = queue.Queue()
         buildCommandList()
 
     def initResetDefaultValues(self):
@@ -533,9 +548,8 @@ class SkedYesUI(QtGui.QMainWindow):
             self.ui.checkBoxch25.setChecked(True)
 
 
-    def disconnectFromDut(self):
+    '''def disconnectFromDut(self):
         global resultFlag
-        self.saveCheckBoxStatus()
         self.msgQ.put("closeReportFile")
         time.sleep(1)
         self.telnetObj.telWrite('\x03') #ctrl + c
@@ -543,10 +557,8 @@ class SkedYesUI(QtGui.QMainWindow):
         self.telnetObj.telWrite("exit") #Exit
         self.ptcHandlingThread.stopThread()
         self.ui.buttonDutConnect.setEnabled(True)
-        self.ui.buttonDutDisconnect.setEnabled(False)
         self.updateDutConnectionStatus(" Not Connected ")
-        self.clearTestResults()
-        resultFlag = True
+        resultFlag = True'''
 
 
     def connectToGsStb(self):
@@ -641,15 +653,13 @@ class SkedYesUI(QtGui.QMainWindow):
         else:
             self.serialObj =1
 
+        self.clearTestResults()
         self.msgQ.put("createReportFile")
-
         self.ptcHandlingThread = getPTCThread(self.msgQ,self.telnetObj, self.serialObj, option,value,msg)
         self.connect(self.ptcHandlingThread, SIGNAL("uiUpdateProcess(QString,QString,QString,QString)"),self.uiUpdateProcess)
-        #self.ui.buttonDutDisconnect.clicked.connect(self.disconnectFromDut)
         self.ptcHandlingThread.start()
         self.ptcHandlingThread.startThread()
         self.ui.buttonDutConnect.setEnabled(False)
-        self.ui.buttonDutDisconnect.setEnabled(True)
         self.checkRfTestItem()
         #self.msgQ.put("startRfTest")
         # auto test enabled
@@ -741,6 +751,16 @@ class SkedYesUI(QtGui.QMainWindow):
             self.updatetestEndLabel(result, value)
         elif(option == "updateTestResult"):
             self.updateTestResult(result, value)
+        elif(option == "updateConnectbotton"):
+            self.updateConnectbotton(result)
+        elif(option == "updateDutConnectionStatus"):
+            self.updateDutConnectionStatus(result)
+
+    def updateConnectbotton(self, value):
+        if value == "PASS":
+            self.ui.buttonDutConnect.setEnabled(True)
+        else:
+            self.ui.buttonDutConnect.setEnabled(False)
 
     def updateGsConnectionStatus(self,text):
         if text == "Connected":
@@ -1816,7 +1836,7 @@ except AttributeError:
 if __name__ == "__main__":
     app = QtGui.QApplication(sys.argv)
     myapp = SkedYesUI()
-    myapp.setWindowTitle(_translate("RFTEST", "SKED YES V1.11", None))
+    myapp.setWindowTitle(_translate("RFTEST", "SKED YES V1.12", None))
     myapp.show()
     QtCore.QObject.connect(app, QtCore.SIGNAL(_fromUtf8("lastWindowClosed()")),forceCloseApp)
     signal.signal(signal.SIGINT, signal.SIG_DFL)
