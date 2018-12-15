@@ -26,6 +26,7 @@ exitFlag = 0
 hddtestCnt =0
 hddtestFlag = 0
 resultFlag = True
+zigbeeTestChannelInfo = "20"
 
 try:
     _encoding = QtGui.QApplication.UnicodeUTF8
@@ -157,6 +158,9 @@ class getPTCThread(QThread):
 
     def ptcPerformRfPowerTestCh11(self):
         global resultFlag
+        if resultFlag == False :
+            return
+
         if self.powerTestMode == 0 :
             stbPowerTestInfo = stbPerformChannelPowerTesting(self,self.telnetObj,self.serialObj,1,11)
             self.powerTestMode = 1
@@ -184,6 +188,8 @@ class getPTCThread(QThread):
 
     def ptcPerformRfPowerTestCh15(self):
         global resultFlag
+        if resultFlag == False :
+            return
         if self.powerTestMode == 0 :
             stbPowerTestInfo = stbPerformChannelPowerTesting(self,self.telnetObj,self.serialObj,1,15)
             self.powerTestMode = 1
@@ -211,6 +217,8 @@ class getPTCThread(QThread):
 
     def ptcPerformRfPowerTestCh20(self):
         global resultFlag
+        if resultFlag == False :
+            return
         if self.powerTestMode == 0 :
             stbPowerTestInfo = stbPerformChannelPowerTesting(self,self.telnetObj,self.serialObj,1,20)
             self.powerTestMode = 1
@@ -239,6 +247,8 @@ class getPTCThread(QThread):
 
     def ptcPerformRfPowerTestCh25(self):
         global resultFlag
+        if resultFlag == False :
+            return
         if self.powerTestMode == 0 :
             stbPowerTestInfo = stbPerformChannelPowerTesting(self,self.telnetObj,self.serialObj,1,25)
             self.powerTestMode = 1
@@ -266,6 +276,8 @@ class getPTCThread(QThread):
 
     def ptcPerformGetSerialNumber(self):
         global resultFlag
+        if resultFlag == False :
+            return
         stbSnInfo = stbGetSerialNumber(self, self.telnetObj)
         if stbSnInfo !='':
             #self.updateSerialNumberInfo(stbSnInfo[0],stbSnInfo[1])
@@ -282,6 +294,8 @@ class getPTCThread(QThread):
     def ptcPerformGetSoftwareVersion(self):
         #Get the Software Version
         global resultFlag
+        if resultFlag == False :
+            return
         stbSoftwareVer = stbGetSoftwareVersion(self, self.telnetObj)
         if stbSoftwareVer !='':
             self.ptc_update_msg("updateSoftwareVersion","PASS",stbSoftwareVer,"")
@@ -294,6 +308,8 @@ class getPTCThread(QThread):
     def ptcPerformDumpUEC(self):
         # Dump UEC Code
         global resultFlag
+        if resultFlag == False :
+            return
         stbDumpInfo = stbDumpUecCode(self,self.telnetObj)
         if stbDumpInfo !='':
             self.ptc_update_msg("updateUecCodeDump","PASS",stbDumpInfo,"")
@@ -305,6 +321,8 @@ class getPTCThread(QThread):
 
     def ptcPerformUSB(self):
         global resultFlag
+        if resultFlag == False :
+            return
         # Usb Test
         stbUsbInfo = stbPerformUsbTest(self,self.telnetObj)
         if stbUsbInfo !='':
@@ -317,6 +335,8 @@ class getPTCThread(QThread):
 
     def ptcPerformFan(self):
         global resultFlag
+        if resultFlag == False :
+            return
         #Fan test
         stbFanInfo = stbPerformFanTest(self,self.telnetObj)
         if stbFanInfo !='':
@@ -340,6 +360,8 @@ class getPTCThread(QThread):
 
     def ptcPerformSata(self):
         global resultFlag
+        if resultFlag == False :
+            return
         #Sata test
         stbHddInfo = stbPerformHddTest(self,self.telnetObj)
         if stbHddInfo !='':
@@ -353,6 +375,8 @@ class getPTCThread(QThread):
 
     def ptcPerformHDMI(self):
         global resultFlag
+        if resultFlag == False :
+            return
         #Hdmi_output test
         stbHdmiOutInfo = stbPerformHdmiTest(self, self.telnetObj)
         if stbHdmiOutInfo !='':
@@ -365,6 +389,8 @@ class getPTCThread(QThread):
 
     def ptcPerformMAC(self):
         global resultFlag
+        if resultFlag == False :
+            return
         stbProgramMacAdd = stbProgramMacAddress(self, self.telnetObj)
         if stbProgramMacAdd !='':
             self.ptc_update_msg("updateMacAddressResult","PASS",stbProgramMacAdd,"")
@@ -374,6 +400,8 @@ class getPTCThread(QThread):
 
     def ptcPerformMOCA(self):
         global resultFlag
+        if resultFlag == False :
+            return
         stbMocaTestInfo = stbPerformMocaTest(self,self.telnetObj,self.serialObj)
         if stbMocaTestInfo !='':
             self.ptc_update_msg("updateMocaResult","PASS",stbMocaTestInfo,"")
@@ -385,6 +413,8 @@ class getPTCThread(QThread):
 
     def ptcPerformZIGBEE(self):
         global resultFlag
+        if resultFlag == False :
+            return
         stbZigBeeTestInfo = stbPerformZigBeeTest(self,self.telnetObj,self.serialObj)
         if stbZigBeeTestInfo !='':
             resultList = re.findall(r'[-]?\d+', stbZigBeeTestInfo)
@@ -433,7 +463,7 @@ class SkedYesUI(QtGui.QMainWindow):
         self.ui.buttonGoldenSampleConnect.clicked.connect(self.connectToGsStb)
         self.ui.buttonDutConnect.clicked.connect(self.connectToDut)
         self.ui.buttonSave.clicked.connect(self.saveCheckBoxStatus)
-        self.serialObj = 0;
+        self.serialObj = 0
         self.msgQ = queue.Queue()
         buildCommandList()
 
@@ -447,6 +477,17 @@ class SkedYesUI(QtGui.QMainWindow):
 
     def getcheckboxstatus(self):
         checkboxStatus = ""
+        if zigbeeTestChannelInfo == "11" :
+            checkboxStatus = checkboxStatus + "1"
+        elif zigbeeTestChannelInfo == "15" :
+            checkboxStatus = checkboxStatus + "2"
+        elif zigbeeTestChannelInfo == "20" :
+            checkboxStatus = checkboxStatus + "3"
+        elif zigbeeTestChannelInfo == "25" :
+            checkboxStatus = checkboxStatus + "4"
+        else :
+            checkboxStatus = checkboxStatus + "0"
+
         if self.ui.checkBoxMSTC.isChecked():
             checkboxStatus = checkboxStatus + "1"
         else :
@@ -518,33 +559,43 @@ class SkedYesUI(QtGui.QMainWindow):
             return
         line = file.readline()
         file.close()
-        if len(line) < 13:
+        global zigbeeTestChannelInfo
+        if len(line) >= 1:
+            if line[0] == '1':
+                zigbeeTestChannelInfo = "11"
+            elif line[0] == '2':
+                zigbeeTestChannelInfo = "15"
+            elif line[0] == '3':
+                zigbeeTestChannelInfo = "20"
+            elif line[0] == '4':
+                zigbeeTestChannelInfo = "25"
+        if len(line) < 14:
             return
-        if (line[0] == '1'):
-            self.ui.checkBoxMSTC.setChecked(True)
         if (line[1] == '1'):
-            self.ui.checkBoxMSTC_UEC_DUMP.setChecked(True)
+            self.ui.checkBoxMSTC.setChecked(True)
         if (line[2] == '1'):
-            self.ui.checkBoxUSB.setChecked(True)
+            self.ui.checkBoxMSTC_UEC_DUMP.setChecked(True)
         if (line[3] == '1'):
-            self.ui.checkBoxFan.setChecked(True)
+            self.ui.checkBoxUSB.setChecked(True)
         if (line[4] == '1'):
-            self.ui.checkBoxFan_SATA.setChecked(True)
+            self.ui.checkBoxFan.setChecked(True)
         if (line[5] == '1'):
-            self.ui.checkBoxHDMI.setChecked(True)
+            self.ui.checkBoxFan_SATA.setChecked(True)
         if (line[6] == '1'):
-            self.ui.checkBoxMAC.setChecked(True)
+            self.ui.checkBoxHDMI.setChecked(True)
         if (line[7] == '1'):
-            self.ui.checkBoxMOCA.setChecked(True)
+            self.ui.checkBoxMAC.setChecked(True)
         if (line[8] == '1'):
-            self.ui.checkBoxZIGBEE.setChecked(True)
+            self.ui.checkBoxMOCA.setChecked(True)
         if (line[9] == '1'):
-            self.ui.checkBoxch11.setChecked(True)
+            self.ui.checkBoxZIGBEE.setChecked(True)
         if (line[10] == '1'):
-            self.ui.checkBoxch15.setChecked(True)
+            self.ui.checkBoxch11.setChecked(True)
         if (line[11] == '1'):
-            self.ui.checkBoxch20.setChecked(True)
+            self.ui.checkBoxch15.setChecked(True)
         if (line[12] == '1'):
+            self.ui.checkBoxch20.setChecked(True)
+        if (line[13] == '1'):
             self.ui.checkBoxch25.setChecked(True)
 
 
@@ -988,6 +1039,15 @@ class SkedYesUI(QtGui.QMainWindow):
             self.ui.testEndLabel.setStyleSheet(_fromUtf8("QLabel { background-color : red; color : white; }"))
             self.ui.testEndLabel.setText("ERROR")
             self.ui.testEndLabel.show()
+    def forceClose(self):
+        # Close comport
+        self.serialObj.serExit()
+        # Close Telnet
+        time.sleep(1)
+        self.ptcHandlingThread.telnetObj.telWrite('\x03') #ctrl + c
+        time.sleep(1)
+        self.ptcHandlingThread.telnetObj.telWrite("exit") #Exit
+
 
 def stbPerformMocaTest(app,tel,ser):
     findstr= "RX THROUGHPUT PASS"
@@ -1031,7 +1091,8 @@ def stbPerformZigBeeTest(app,tel,ser):
     # rx 1
 
     #Setup DUT for Zigbee test
-    print (" Setup DUT for Zigbee Test")
+    print (" Setup DUT for Zigbee Test, use channel:")
+    print [zigbeeTestChannelInfo]
     tel.telWrite('\x03') #ctrl + c
     time.sleep(.2)
     tel.telWrite("GP510_transceiver 2")
@@ -1040,7 +1101,8 @@ def stbPerformZigBeeTest(app,tel,ser):
     match = re.search(findstrInit,data)
     if match:
         #Init done
-        tel.telWrite("ch 20")
+        cmd = "ch " + zigbeeTestChannelInfo
+        tel.telWrite(cmd)
         time.sleep(.2)
         data = tel.telReadSocket(app)
 
@@ -1060,7 +1122,7 @@ def stbPerformZigBeeTest(app,tel,ser):
         # Dut always slow one command
         # add this to enable rx temply
         # This is not a solution
-        tel.telWrite("ch 20")
+        tel.telWrite(cmd)
         time.sleep(.2)
         data = tel.telReadSocket(app)
 
@@ -1101,7 +1163,7 @@ def stbPerformZigBeeTest(app,tel,ser):
     if respondFound:
         print("GS Init Done Start sending commands")
         #Init done
-        ser.serWrite("ch 20")
+        ser.serWrite(cmd)
         time.sleep(.2)
         ser.serWrite("\r\n")
         data = ser.serRead(app)
@@ -1836,7 +1898,7 @@ except AttributeError:
 if __name__ == "__main__":
     app = QtGui.QApplication(sys.argv)
     myapp = SkedYesUI()
-    myapp.setWindowTitle(_translate("RFTEST", "SKED YES V1.12", None))
+    myapp.setWindowTitle(_translate("RFTEST", "SKED YES V1.14", None))
     myapp.show()
     QtCore.QObject.connect(app, QtCore.SIGNAL(_fromUtf8("lastWindowClosed()")),forceCloseApp)
     signal.signal(signal.SIGINT, signal.SIG_DFL)

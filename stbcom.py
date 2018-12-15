@@ -227,3 +227,6 @@ class SkedSerial():
                 return ''
         except:
             print ("There is no connection ")
+
+    def serExit(self, app):
+        self.serial.close()
