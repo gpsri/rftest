@@ -26,7 +26,7 @@ exitFlag = 0
 hddtestCnt =0
 hddtestFlag = 0
 resultFlag = True
-zigbeeTestChannelInfo = "20"
+zigbeeTestChannelInfo = "11"
 
 try:
     _encoding = QtGui.QApplication.UnicodeUTF8
@@ -131,6 +131,8 @@ class getPTCThread(QThread):
                 stbSN = str(stbSnInfo[0])
             else :
                 stbSN = "NOSN"
+            if os.path.exists(stbSN + ".txt") == True:
+                os.remove(stbSN + ".txt")
             copyfile(srcFile, stbSN + ".txt")
             os.remove(srcFile)
 
@@ -425,7 +427,7 @@ class getPTCThread(QThread):
             print (avgRSSI)
             print (avgLQI)
             stbZigBeeTestInfo = "RX ="+str(rxVal)+ ":" + "Avg RSSI:"+ str(avgRSSI) + " Avg LQI:" + str(avgLQI)
-            if rxVal >= 990 and rxVal <= 1000 and avgRSSI >= -80 and avgRSSI <= 1 and avgLQI >= -10 and avgLQI <= 80:
+            if rxVal >= 990 and rxVal <= 1050 and avgRSSI >= -80 and avgRSSI <= 1 and avgLQI >= -10 and avgLQI <= 80:
                 self.ptc_update_msg("updateZigBeeResult","PASS",stbZigBeeTestInfo,"")
                 self.reportFile.write(str("ZIGBEE=1")+'\n')
             else:
@@ -477,7 +479,7 @@ class SkedYesUI(QtGui.QMainWindow):
 
     def getcheckboxstatus(self):
         checkboxStatus = ""
-        if zigbeeTestChannelInfo == "11" :
+        '''if zigbeeTestChannelInfo == "11" :
             checkboxStatus = checkboxStatus + "1"
         elif zigbeeTestChannelInfo == "15" :
             checkboxStatus = checkboxStatus + "2"
@@ -486,7 +488,7 @@ class SkedYesUI(QtGui.QMainWindow):
         elif zigbeeTestChannelInfo == "25" :
             checkboxStatus = checkboxStatus + "4"
         else :
-            checkboxStatus = checkboxStatus + "0"
+            checkboxStatus = checkboxStatus + "0"'''
 
         if self.ui.checkBoxMSTC.isChecked():
             checkboxStatus = checkboxStatus + "1"
@@ -540,6 +542,10 @@ class SkedYesUI(QtGui.QMainWindow):
             checkboxStatus = checkboxStatus + "1"
         else :
             checkboxStatus = checkboxStatus + "0"
+
+
+        checkboxStatus = checkboxStatus + "\n"
+        checkboxStatus = checkboxStatus + "channelnum=" + zigbeeTestChannelInfo
         return checkboxStatus
 
     def saveCheckBoxStatus(self):
@@ -557,45 +563,52 @@ class SkedYesUI(QtGui.QMainWindow):
         file = open("cb.his",'r')
         if (file == 0):
             return
-        line = file.readline()
-        file.close()
+        input = file.readline()
+        line = ""
+        numofline = 1
         global zigbeeTestChannelInfo
-        if len(line) >= 1:
-            if line[0] == '1':
+        while input != "" :
+            line = line + input
+            line = line + " "
+            input = file.readline()
+            numofline = numofline + 1
+        file.close()
+
+        idx = line.find("channelnum=")
+        if idx != -1:
+            zigbeeTestChannelInfo = line[idx+len("channelnum="):idx+len("channelnum=")+2]
+            ch = string.atoi(zigbeeTestChannelInfo, 10)
+            if ch > 26 or ch < 11 :
+                print "channel num set fail"
                 zigbeeTestChannelInfo = "11"
-            elif line[0] == '2':
-                zigbeeTestChannelInfo = "15"
-            elif line[0] == '3':
-                zigbeeTestChannelInfo = "20"
-            elif line[0] == '4':
-                zigbeeTestChannelInfo = "25"
-        if len(line) < 14:
+
+        if len(line) < 13:
             return
-        if (line[1] == '1'):
+        if (line[0] == '1'):
             self.ui.checkBoxMSTC.setChecked(True)
-        if (line[2] == '1'):
+        if (line[1] == '1'):
             self.ui.checkBoxMSTC_UEC_DUMP.setChecked(True)
-        if (line[3] == '1'):
+        if (line[2] == '1'):
             self.ui.checkBoxUSB.setChecked(True)
-        if (line[4] == '1'):
+        if (line[3] == '1'):
             self.ui.checkBoxFan.setChecked(True)
-        if (line[5] == '1'):
+        if (line[4] == '1'):
             self.ui.checkBoxFan_SATA.setChecked(True)
-        if (line[6] == '1'):
+        if (line[5] == '1'):
             self.ui.checkBoxHDMI.setChecked(True)
-        if (line[7] == '1'):
+        if (line[6] == '1'):
             self.ui.checkBoxMAC.setChecked(True)
-        if (line[8] == '1'):
+        if (line[7] == '1'):
             self.ui.checkBoxMOCA.setChecked(True)
-        if (line[9] == '1'):
+        if (line[8] == '1'):
             self.ui.checkBoxZIGBEE.setChecked(True)
-        if (line[10] == '1'):
+        if (line[9] == '1'):
             self.ui.checkBoxch11.setChecked(True)
-        if (line[11] == '1'):
+        if (line[10] == '1'):
             self.ui.checkBoxch15.setChecked(True)
-        if (line[12] == '1'):
+        if (line[11] == '1'):
             self.ui.checkBoxch20.setChecked(True)
-        if (line[13] == '1'):
+        if (line[12] == '1'):
             self.ui.checkBoxch25.setChecked(True)
 
 
@@ -615,6 +628,10 @@ class SkedYesUI(QtGui.QMainWindow):
     def connectToGsStb(self):
         print ("Connecting to COM Port  ... ")
         comport = str(self.ui.goldenSampleIfList.currentText())
+        if comport == "" :
+            self.updateGsConnectionStatus("Not Connected")
+            print ("Serial Connection Failed please check the serial port connection")
+            return
         '''
         print sys.platform
         if sys.platform == "linux2" or sys.platform == "linux":
@@ -638,6 +655,8 @@ class SkedYesUI(QtGui.QMainWindow):
         self.updateGsConnectionStatus("Connected")
         res = stbPrepareGsRfTest(self,self.serialObj)
         if res != 0:
+            self.updateGsConnectionStatus("Not Connected")
+            self.serialObj.serExit()
             print ("Serial Connection Failed please check the serial port connection")
 
 
@@ -815,8 +834,10 @@ class SkedYesUI(QtGui.QMainWindow):
 
     def updateGsConnectionStatus(self,text):
         if text == "Connected":
+            self.ui.goldenSampleConnectionLabel.setStyleSheet(_fromUtf8("QLabel { background-color : green; color : white; }"))
             self.ui.goldenSampleConnectionLabel.setText("GS Connected")
         else:
+            self.ui.goldenSampleConnectionLabel.setStyleSheet(_fromUtf8("QLabel { background-color : red; color : white; }"))
             self.ui.goldenSampleConnectionLabel.setText("GS Not Connected")
 
     def updateDutConnectionStatus(self,text):
@@ -1051,21 +1072,68 @@ class SkedYesUI(QtGui.QMainWindow):
 
 def stbPerformMocaTest(app,tel,ser):
     findstr= "RX THROUGHPUT PASS"
+    findstrInit= "Assume 100"
+    findstrFail = "Broken pipe"
+    respondFound =0
+    findstrGsSampleForMocaDown= "MoCA link is down"
+    findstrGsSampleForMocaUp= "MoCA link is up"
     tel.telWrite('\x03') #ctrl + c
     time.sleep(.2)
     tel.telWrite(command_list[TestCommnad.MOCA_TEST_CMD1])
     time.sleep(.2)
     data = tel.telReadSocket(app)
+    dataSerial = ser.serRead(app)
+    print dataSerial
     tel.telWrite(command_list[TestCommnad.MOCA_TEST_CMD2])
-    time.sleep(10)
+    time.sleep(2)
+    dataSerial = ser.serRead(app)
+    print dataSerial
+    matchDown = re.search(findstrGsSampleForMocaDown,dataSerial)
+    matchUp = re.search(findstrGsSampleForMocaUp,dataSerial)
     data = tel.telReadSocket(app)
-    tel.telWrite(command_list[TestCommnad.MOCA_TEST_CMD3])
+    print data
+    if matchUp:
+        print("Mocalink is Up continue the test")
+        respondFound =1
+    else:# Golden Sample MocaLink is Down-So,Init the moca again to make up
+        tel.telWrite(command_list[TestCommnad.MOCA_TEST_CMD2])
+        retrycnt = 0
+        respondFound = 0
+        while retrycnt < 15 and respondFound == 0:
+            time.sleep(1)
+            dataSerial = ser.serRead(app)
+            print dataSerial
+            matchUp = re.search(findstrGsSampleForMocaUp,dataSerial)
+            if matchUp :
+                respondFound = 1
+            else :
+                retrycnt +=1
+
+    if respondFound == 1 :
+        print ("MOCA Init Done ")
+    else :
+        print ("MOCA FAIL when Init")
+        return ''
+
     #data = tel.telReadSocket(app)
-    print ("going to wait for 15 secs to complete the THROUGHPUT test ")
-    time.sleep(15)
-    data = tel.telReadSocket(app)
-    match = re.search(findstr,data)
-    if match :
+    #print ("going to wait for 15 secs to complete the THROUGHPUT test ")
+    retrycnt = 0
+    respondFound = 0
+    tel.telWrite(command_list[TestCommnad.MOCA_TEST_CMD3])
+    while retrycnt < 15 and respondFound == 0:
+        time.sleep(1)
+        print retrycnt
+        data = tel.telReadSocket(app)
+        match = re.search(findstr,data)
+        matchFail = re.search(findstrFail,data)
+        if match :
+            respondFound = 1
+        elif matchFail:
+            print ("MOCA FAIL")
+            return ''
+        else :
+            retrycnt +=1
+    if respondFound == 1 :
         print ("MOCA PASS ")
         return data
     else :
@@ -1568,7 +1636,7 @@ def stbPrepareGsRfTest(app,ser):
     else:
         waitforfind = 1
         retryCnt = 0
-        while waitforfind and retryCnt < 10:
+        while waitforfind and retryCnt < 5:
             data = ser.serRead(app)
             print (data)
             time.sleep(2)
@@ -1898,7 +1966,7 @@ except AttributeError:
 if __name__ == "__main__":
     app = QtGui.QApplication(sys.argv)
     myapp = SkedYesUI()
-    myapp.setWindowTitle(_translate("RFTEST", "SKED YES V1.14", None))
+    myapp.setWindowTitle(_translate("RFTEST", "SKED YES V1.17", None))
     myapp.show()
     QtCore.QObject.connect(app, QtCore.SIGNAL(_fromUtf8("lastWindowClosed()")),forceCloseApp)
     signal.signal(signal.SIGINT, signal.SIG_DFL)

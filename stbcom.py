@@ -126,11 +126,14 @@ class SkedTelnet():
         tn = telnetlib.Telnet(HOST)
         tn.read_until("login: ")
         tn.write("root" + "\r\n")
+
         print ("login enter")
         #tn.read_until("Password: ")
         #tn.write("606202123" + "\n")
         #tn.write("whoami" +"\n")
         self.tn = tn
+
+        self.telReadSocket(0)
         #print tn.read_until("gps")
 
     def telWrite(self,string):
@@ -142,11 +145,20 @@ class SkedTelnet():
     def telReadSocket(self,app):
         try:
             s= self.tn.get_socket()
-            print (s)
+            defaultTimeout = s.gettimeout()
+            #print(defaultTimeout)
             while 1:
                 QtCore.QCoreApplication.processEvents()
                 time.sleep(.5)
-                data = s.recv(4096)
+                s.settimeout(2)
+                try:
+                    data = s.recv(4096)
+                except:
+                    print "socket read timeout"
+                    return ''
+                #    timeout = s.gettimeout()
+                #    print timeout
+                s.settimeout(defaultTimeout)
                 if not data :
                     print ('No data from Telnet Server')
                 else :
@@ -154,12 +166,13 @@ class SkedTelnet():
                     print ("SS")
                     sys.stdout.write(data)
                     #user entered a message
-                    if data:
-                        return data
-                    else:
-                        return ''
+                if data:
+                    return data
+                else:
+                    return ''
         except:
             print ("There is not connection ")
+            return ''
 
     def telread(self,string):
         return self.tn.read_until(string)
@@ -184,20 +197,35 @@ class SkedSerial():
                 )
         else:
             print ("open for windows ")
-            ser = serial.Serial(
+            '''ser = serial.Serial(
                 port=comport,
                 baudrate=115200,
                 parity=serial.PARITY_NONE,
                 stopbits=serial.STOPBITS_ONE,
                 bytesize=serial.EIGHTBITS,
                 )
-
-        if(ser.isOpen()):
-            print ("init OK ")
-        ser.close()
-        time.sleep(1)
-        ser.open()
-        self.serial = ser
+            if(ser.isOpen()):
+                print ("init OK ")
+            ser.close()
+            time.sleep(1)
+            ser.open()
+            self.serial = ser'''
+            try :
+                ser = serial.Serial(
+                port=comport,
+                baudrate=115200,
+                parity=serial.PARITY_NONE,
+                stopbits=serial.STOPBITS_ONE,
+                bytesize=serial.EIGHTBITS,
+                )
+                if(ser.isOpen()):
+                    print ("init OK ")
+                ser.close()
+                time.sleep(1)
+                ser.open()
+                self.serial = ser
+            except serial.serialutil.SerialException:
+                print "The port is at use"
 
         #print tn.read_until("gps")
 
@@ -227,6 +255,7 @@ class SkedSerial():
                 return ''
         except:
             print ("There is no connection ")
+            return ''
 
-    def serExit(self, app):
+    def serExit(self):
         self.serial.close()
