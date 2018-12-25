@@ -2,7 +2,7 @@ import sys
 from PyQt4 import QtCore, QtGui
 from PyQt4.QtCore import QThread, SIGNAL
 from rftestui import Ui_rftestui
-from stbcom import TestCommnad, SkedTelnet, buildCommandList, command_list,SkedSerial
+from stbcom import TestCommnad, SkedTelnet, buildCommandList, command_list,SkedSerial, test_pingHOST
 # telnet program example
 import socket, select, string, threading, time
 from threading import Thread, Lock
@@ -711,6 +711,12 @@ class SkedYesUI(QtGui.QMainWindow):
 
 
     def connectToDut(self):
+        self.ui.buttonDutConnect.setEnabled(False)
+        print ("Check the net enviorment")
+        if(test_pingHOST() == 0) :
+            self.updateDutConnectionStatus(" Not Connected ")
+            self.ui.buttonDutConnect.setEnabled(True)
+            return
         print ("Connecting to telnet ... ")
         self.telnetObj = SkedTelnet()
         print ("Connected ")
@@ -729,7 +735,6 @@ class SkedYesUI(QtGui.QMainWindow):
         self.connect(self.ptcHandlingThread, SIGNAL("uiUpdateProcess(QString,QString,QString,QString)"),self.uiUpdateProcess)
         self.ptcHandlingThread.start()
         self.ptcHandlingThread.startThread()
-        self.ui.buttonDutConnect.setEnabled(False)
         self.checkRfTestItem()
         #self.msgQ.put("startRfTest")
         # auto test enabled
@@ -1966,7 +1971,7 @@ except AttributeError:
 if __name__ == "__main__":
     app = QtGui.QApplication(sys.argv)
     myapp = SkedYesUI()
-    myapp.setWindowTitle(_translate("RFTEST", "SKED YES V1.17", None))
+    myapp.setWindowTitle(_translate("RFTEST", "SKED YES V1.18", None))
     myapp.show()
     QtCore.QObject.connect(app, QtCore.SIGNAL(_fromUtf8("lastWindowClosed()")),forceCloseApp)
     signal.signal(signal.SIGINT, signal.SIG_DFL)

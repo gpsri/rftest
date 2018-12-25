@@ -3,6 +3,7 @@ import telnetlib
 import time
 import select
 import serial
+import os
 from PyQt4 import QtCore, QtGui
 
 
@@ -10,6 +11,12 @@ HOST = "192.192.192.2"
 #HOST = "192.168.0.240"
 #HOST = "192.168.77.240"
 command_list = []
+
+def test_pingHOST():
+    if(os.system("ping " + HOST + " -w 100 -n 2" )):
+        return 0
+    else :
+        return 1
 
 class TestCommnad:
     GET_VER = 0
@@ -132,7 +139,6 @@ class SkedTelnet():
         #tn.write("606202123" + "\n")
         #tn.write("whoami" +"\n")
         self.tn = tn
-
         self.telReadSocket(0)
         #print tn.read_until("gps")
 
