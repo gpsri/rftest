@@ -789,6 +789,8 @@ class SkedYesUI(QtGui.QMainWindow):
             self.msgQ.put("startUSBTest")
         if self.ui.checkBoxFan.isChecked():
             self.msgQ.put("startFANTest")
+        if self.ui.checkBoxlnb.isChecked():
+            self.msgQ.put("startlnbtest")            
         if self.ui.checkBoxFan_SATA.isChecked():
             self.msgQ.put("startSATATest")
         if self.ui.checkBoxHDMI.isChecked():
@@ -807,8 +809,6 @@ class SkedYesUI(QtGui.QMainWindow):
             self.msgQ.put("startRfPowerTestCh20")
         if self.ui.checkBoxch25.isChecked():
             self.msgQ.put("startRfPowerTestCh25")
-        if self.ui.checkBoxlnb.isChecked():
-            self.msgQ.put("startlnbtest")
         self.msgQ.put("endTest")
 
     def stopPowerLevelTesting(self):
