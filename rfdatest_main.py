@@ -27,6 +27,7 @@ hddtestCnt =0
 hddtestFlag = 0
 resultFlag = True
 zigbeeTestChannelInfo = "11"
+wid = ""
 
 try:
     _encoding = QtGui.QApplication.UnicodeUTF8
@@ -35,7 +36,6 @@ try:
 except AttributeError:
     def _translate(context, text, disambig):
         return QtGui.QApplication.translate(context, text, disambig)
-
 
 class getPTCThread(QThread):
     def __init__(self,msgQ ,telnetObj,serialObj ,option,value, msg ):
@@ -47,6 +47,7 @@ class getPTCThread(QThread):
         self.telnetObj = telnetObj
         self.serialObj = serialObj
         self.powerTestMode = 0
+        self.listenSTDINflag = 0
         self.reportFile = open("temp_", 'w')
 
     def __del__(self):
@@ -89,6 +90,8 @@ class getPTCThread(QThread):
                 self.ptcPerformRfPowerTestCh20()
             elif(msg == "startRfPowerTestCh25"):
                 self.ptcPerformRfPowerTestCh25()
+            elif(msg == "startlnbtest"):
+                self.ptcPerformLNBTest()
             elif(msg == "endTest"):
                 print("test complete")
                 # End
@@ -109,8 +112,12 @@ class getPTCThread(QThread):
                 self.reportFile = open("temp_",'w')
                 if (self.reportFile == 0):
                     print("Can't create Report")
+                global wid
+                if (len(wid) == 10):
+                    self.reportFile.write("WID="+wid+"\n")
             elif(msg == "closeReportFile"):
                 self.closeReportFile()
+
             self.sleep(1)
             self.msgQ.task_done()
 
@@ -246,6 +253,18 @@ class getPTCThread(QThread):
             self.reportFile.write(str("PWRCH20=")+"0 FAIL"'\n')
             resultFlag = False
 
+
+    def ptcPerformLNBTest(self):
+        global resultFlag
+        if resultFlag == False :
+            return
+        stblnbtestinfo = stbPerformLNBTest(self,self.telnetObj,self.serialObj)
+        if stblnbtestinfo == 1:
+            self.ptc_update_msg("updatelnbtest", "1", "0", "")
+            self.reportFile.write("LNB Test Pass"+'\n')
+        else :
+            self.ptc_update_msg("updatelnbtest", "0", "0", "")
+            self.reportFile.write("LNB Test Fail"+'\n')
 
     def ptcPerformRfPowerTestCh25(self):
         global resultFlag
@@ -458,16 +477,29 @@ class SkedYesUI(QtGui.QMainWindow):
         QtGui.QDialog.__init__(self,parent)
 
         self.ui = Ui_rftestui()
-
         self.ui.setupUi(self)
+        self.ui.widlineEdit.setFocus()
         self.initResetDefaultValues()
         self.readCheckBoxHistory()
         self.ui.buttonGoldenSampleConnect.clicked.connect(self.connectToGsStb)
         self.ui.buttonDutConnect.clicked.connect(self.connectToDut)
         self.ui.buttonSave.clicked.connect(self.saveCheckBoxStatus)
+        self.ui.widlineEdit.connect(self.ui.widlineEdit, SIGNAL("returnPressed()"), self.readbarcode)
         self.serialObj = 0
         self.msgQ = queue.Queue()
         buildCommandList()
+
+    def readbarcode(self):
+        global wid
+        str = self.ui.widlineEdit.text()
+        if (len(str) != 10):
+            print "Fail:", str
+            self.ui.widlineEdit.clear()
+        else :
+            self.ui.buttonDutConnect.setText(str)
+            wid = str
+            self.ui.widlineEdit.clear()
+            self.connectToDut()
 
     def initResetDefaultValues(self):
         ports = list(port_list.comports())
@@ -542,6 +574,10 @@ class SkedYesUI(QtGui.QMainWindow):
             checkboxStatus = checkboxStatus + "1"
         else :
             checkboxStatus = checkboxStatus + "0"
+        if self.ui.checkBoxlnb.isChecked():
+            checkboxStatus = checkboxStatus + "1"
+        else :
+            checkboxStatus = checkboxStatus + "0"
 
 
         checkboxStatus = checkboxStatus + "\n"
@@ -610,7 +646,8 @@ class SkedYesUI(QtGui.QMainWindow):
             self.ui.checkBoxch20.setChecked(True)
         if (line[12] == '1'):
             self.ui.checkBoxch25.setChecked(True)
-
+        if (line[13] == '1'):
+            self.ui.checkBoxlnb.setChecked(True)
 
     '''def disconnectFromDut(self):
         global resultFlag
@@ -673,6 +710,8 @@ class SkedYesUI(QtGui.QMainWindow):
         self.ui.usbValue.clear()
         self.ui.usbResult.clear()
         self.ui.usbResult.hide()
+        self.ui.lnbresult.clear()
+        self.ui.lnbresult.hide()
         self.ui.fanValue.clear()
         self.ui.fanResult.clear()
         self.ui.fanResult.hide()
@@ -731,11 +770,13 @@ class SkedYesUI(QtGui.QMainWindow):
 
         self.clearTestResults()
         self.msgQ.put("createReportFile")
+        self.ui.widlineEdit.setFocus()
         self.ptcHandlingThread = getPTCThread(self.msgQ,self.telnetObj, self.serialObj, option,value,msg)
         self.connect(self.ptcHandlingThread, SIGNAL("uiUpdateProcess(QString,QString,QString,QString)"),self.uiUpdateProcess)
         self.ptcHandlingThread.start()
         self.ptcHandlingThread.startThread()
         self.checkRfTestItem()
+
         #self.msgQ.put("startRfTest")
         # auto test enabled
         #self.ptcPerformRfTest()
@@ -766,6 +807,8 @@ class SkedYesUI(QtGui.QMainWindow):
             self.msgQ.put("startRfPowerTestCh20")
         if self.ui.checkBoxch25.isChecked():
             self.msgQ.put("startRfPowerTestCh25")
+        if self.ui.checkBoxlnb.isChecked():
+            self.msgQ.put("startlnbtest")
         self.msgQ.put("endTest")
 
     def stopPowerLevelTesting(self):
@@ -830,6 +873,22 @@ class SkedYesUI(QtGui.QMainWindow):
             self.updateConnectbotton(result)
         elif(option == "updateDutConnectionStatus"):
             self.updateDutConnectionStatus(result)
+        elif(option == "updatebuttonDutConnect"):
+            self.updatebuttonDutConnect(result, value)
+        elif(option == "updatelnbtest"):
+            self.updatelnbtest(result)
+
+    def updatelnbtest(self, result):
+        if result == "1":
+            self.ui.lnbresult.setStyleSheet(_fromUtf8("QLabel { background-color : green; color : white; }"))
+            self.ui.lnbresult.setText("PASS")
+        else :
+            self.ui.lnbresult.setStyleSheet(_fromUtf8("QLabel { background-color : red; color : white; }"))
+            self.ui.lnbresult.setText("FAIL")
+        self.ui.lnbresult.show()
+
+    def updatebuttonDutConnect(self, text, flag):
+        self.updatebuttonDutConnect.setText(result)
 
     def updateConnectbotton(self, value):
         if value == "PASS":
@@ -1506,6 +1565,21 @@ def stbPerformZigBeeTest(app,tel,ser):
         print " Return msg 2"
         return ''
 '''
+def stbPerformLNBTest(app, tel, ser):
+    currentProgressbarValue = 20
+    matchStr18V = "18V"
+    matchStr22k ="22k:on"
+    print "LNB 18V ON and 22Khz ON"
+    tel.telWrite("diseqc 18 1")
+    time.sleep(1)
+    data = tel.telReadSocket(app)
+    match = re.search(matchStr18V,data)
+    match1 = re.search(matchStr22k,data)
+    if match and match1:
+        return 1
+    else:
+        return 0
+
 def stbPerformChannelPowerTesting(app,tel,ser,initMode,chnum):
     findstrInit = "PAN"
     findCwustr= "Continuous Wave Unmodulated"
@@ -1971,7 +2045,7 @@ except AttributeError:
 if __name__ == "__main__":
     app = QtGui.QApplication(sys.argv)
     myapp = SkedYesUI()
-    myapp.setWindowTitle(_translate("RFTEST", "SKED YES V1.18", None))
+    myapp.setWindowTitle(_translate("RFTEST", "SKED YES V1.19", None))
     myapp.show()
     QtCore.QObject.connect(app, QtCore.SIGNAL(_fromUtf8("lastWindowClosed()")),forceCloseApp)
     signal.signal(signal.SIGINT, signal.SIG_DFL)

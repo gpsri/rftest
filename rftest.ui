@@ -111,15 +111,16 @@
   <widget class="QPushButton" name="buttonDutConnect">
    <property name="geometry">
     <rect>
-     <x>250</x>
+     <x>270</x>
      <y>40</y>
-     <width>151</width>
+     <width>131</width>
      <height>31</height>
     </rect>
    </property>
    <property name="font">
     <font>
-     <pointsize>7</pointsize>
+     <family>Agency FB</family>
+     <pointsize>12</pointsize>
     </font>
    </property>
    <property name="text">
@@ -162,7 +163,7 @@
   <widget class="QTextEdit" name="dutIpAddressText">
    <property name="geometry">
     <rect>
-     <x>111</x>
+     <x>50</x>
      <y>40</y>
      <width>121</width>
      <height>22</height>
@@ -1397,8 +1398,8 @@
   <widget class="QLabel" name="dutConnectionLabel">
    <property name="geometry">
     <rect>
-     <x>410</x>
-     <y>40</y>
+     <x>420</x>
+     <y>50</y>
      <width>128</width>
      <height>21</height>
     </rect>
@@ -1523,6 +1524,82 @@
    </property>
    <property name="text">
     <string/>
+   </property>
+  </widget>
+  <widget class="QLineEdit" name="widlineEdit">
+   <property name="geometry">
+    <rect>
+     <x>170</x>
+     <y>40</y>
+     <width>91</width>
+     <height>31</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QLabel" name="lnblabel">
+   <property name="geometry">
+    <rect>
+     <x>400</x>
+     <y>130</y>
+     <width>102</width>
+     <height>22</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>9</pointsize>
+    </font>
+   </property>
+   <property name="text">
+    <string>LNB</string>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="checkBoxlnb">
+   <property name="geometry">
+    <rect>
+     <x>400</x>
+     <y>150</y>
+     <width>73</width>
+     <height>22</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string/>
+   </property>
+  </widget>
+  <widget class="QLabel" name="lnbresult">
+   <property name="geometry">
+    <rect>
+     <x>450</x>
+     <y>140</y>
+     <width>48</width>
+     <height>22</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>9</pointsize>
+     <weight>75</weight>
+     <bold>true</bold>
+    </font>
+   </property>
+   <property name="autoFillBackground">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string/>
+   </property>
+   <property name="scaledContents">
+    <bool>false</bool>
+   </property>
+   <property name="wordWrap">
+    <bool>true</bool>
+   </property>
+   <property name="margin">
+    <number>1</number>
+   </property>
+   <property name="indent">
+    <number>0</number>
    </property>
   </widget>
  </widget>
